@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply font-sans;
+  }
+  
+  body {
+    @apply bg-gray-900 text-gray-100;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .glass-effect {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  }
+  
+  .gradient-primary {
+    @apply bg-gradient-to-r from-violet-600 to-indigo-600;
+  }
+  
+  .gradient-success {
+    @apply bg-gradient-to-r from-emerald-600 to-teal-600;
+  }
+  
+  .gradient-accent {
+    @apply bg-gradient-to-r from-pink-600 to-rose-600;
+  }
+}
+
