@@ -6,7 +6,6 @@ from Services import simple_rag_service as rag_service
 
 router = APIRouter()
 
-# Temporary storage for extracted text (backward compatibility)
 _stored_text = ""
 
 class ChatRequest(BaseModel):

@@ -1,62 +1,182 @@
 # ✨ Luma
 
-An AI-powered learning platform that uses Retrieval-Augmented Generation (RAG) and modern web tooling to extract knowledge from web content, generate study materials, and provide an interactive study experience.
+An AI-powered learning platform that demonstrates **RAG (Retrieval-Augmented Generation)** and modern full-stack development. Extract content from any URL, generate AI study materials, and interact with an intelligent chat system.
 
-This README is detailed and reflects the current repository state (Backend + Frontend), including features, endpoints, setup, environment, and developer tips.
+**Perfect for portfolios and technical interviews** - showcases practical AI/ML skills with explainable, production-ready features.
 
-## 🚀 Features
+---
 
-### 1) Advanced RAG + Hybrid Search
-- Multiple search strategies in Services:
-	- TF-IDF keyword search (simple RAG)
-	- BM25 probabilistic ranking
-	- Hybrid Search (TF-IDF + BM25)
-	- Reciprocal Rank Fusion (RRF) for combining ranked lists
-- Sentence-based chunking, source metadata, and dual stores (simple and advanced)
-- Warmup endpoint to check stores and readiness
+## 🎯 Core Features (5 Essential)
 
-### 2) Conversational Chat (Basic + Advanced)
-- Basic chat: RAG-based QA with context retrieval
-- Advanced chat: conversational memory, query enhancement, selectable search method (hybrid/rrf)
-- Session management: list sessions, view history, clear sessions
+### 1️⃣ **Smart Content Extraction**
+- Scrape and clean text from any URL using BeautifulSoup
+- Automatic text preprocessing and chunking
+- Dual vector store indexing (simple + advanced)
 
-### 3) Adaptive Learning Path (ML)
-- Study and quiz performance tracking
-- Topic recommendations based on cosine similarity and user history
-- Stats and basic performance prediction helpers
+### 2️⃣ **AI Study Notes Generator**
+- Comprehensive study materials: summaries, key points, definitions
+- Flashcards for memorization
+- Mind map structure generation
+- Topic-based retrieval from indexed content
 
-### 4) Automated Notes & Study Materials
-- Generate comprehensive study notes (summary, key points, definitions)
-- Flashcards and mind map structure generation
-- Quick summaries for arbitrary content
+### 3️⃣ **Basic RAG Chat**
+- Simple Q&A using TF-IDF vector retrieval
+- Context-aware responses using LLM
+- Source tracking for answer verification
 
-### 5) Knowledge Extraction & Indexing
-- Extract clean text from URLs (BeautifulSoup + heuristics)
-- Index into both simple and advanced RAG stores
-- Optional concept extraction via Gemini
-- Clear vector store endpoint for clean re-runs
+### 4️⃣ **Advanced Chat with Hybrid Search**
+- **Hybrid Retrieval**: TF-IDF + BM25 + Reciprocal Rank Fusion (RRF)
+- **Conversational Memory**: Session-based context using LangChain
+- Multiple search strategies (hybrid, RRF, simple)
+- Session management (history, clear, list)
 
-### 6) Modern UI/UX
-- React + Vite + Tailwind dark theme
-- `react-toastify` notifications, `react-spinners` loaders, `lucide-react` icons
-- Markdown rendering removed; responses render as plain text with preserved whitespace
+### 5️⃣ **Interactive Quiz Generation**
+- AI-generated MCQs from content
+- Difficulty levels and question types
+- Topic-based filtering
+- Detailed explanations for answers
+
+---
 
 ## 🛠️ Tech Stack
 
-Backend (`Backend/requirements.txt`):
-- FastAPI 0.95.2, uvicorn 0.22.0
-- google-generativeai 0.7.2, python-dotenv 1.0.0
-- scikit-learn 1.3.0, numpy 1.24.3, rank-bm25 0.2.2
-- requests 2.31.0, beautifulsoup4 4.12.2, websockets 12.0
-- pydantic 1.10.12, langchain 0.0.340
+**Backend:**
+- FastAPI + Uvicorn (async Python web framework)
+- Google Gemini AI (LLM integration)
+- scikit-learn (TF-IDF vectorization)
+- rank-bm25 (probabilistic ranking)
+- LangChain (conversational memory)
+- BeautifulSoup (web scraping)
 
-Frontend (`Frontend/package.json`):
-- react 18.3.1, react-dom 18.3.1
-- vite 5.x, tailwindcss 3.4.x
-- react-router-dom 6.22.3, axios 1.6.7
-- react-toastify 11.0.5, react-spinners 0.17.0, lucide-react 0.292.0
+**Frontend:**
+- React 18 + Vite (fast dev server)
+- Tailwind CSS (modern styling)
+- React Router (navigation)
+- Axios (API client)
+- react-toastify (notifications)
 
-## 📁 Project Structure
+**Key Algorithms:**
+- TF-IDF (term frequency-inverse document frequency)
+- BM25 (Best Matching 25 - probabilistic ranking)
+- RRF (Reciprocal Rank Fusion - rank aggregation)
+- Cosine similarity (vector search)
+
+---
+
+## 🚀 Quick Start (Windows)
+
+### Prerequisites
+- Python 3.9+ ([Download](https://www.python.org/downloads/))
+- Node.js 16+ ([Download](https://nodejs.org/))
+- **Gemini API Key** ([Get Free Key](https://ai.google.dev/))
+- Git Bash or Command Prompt
+
+### Backend Setup
+
+```cmd
+cd Backend
+
+REM Create virtual environment
+python -m venv venv
+
+REM Activate virtual environment
+venv\Scripts\activate
+
+REM Install dependencies
+pip install -r requirements.txt
+
+REM Configure API key (REQUIRED)
+copy .env.example .env
+REM Edit .env and add your Gemini API key
+
+REM Start server
+uvicorn app:app --reload --host 127.0.0.1 --port 8000
+```
+
+Backend will be available at: `http://127.0.0.1:8000`
+
+**Important:** The application requires a valid Gemini API key. Get one free at [https://ai.google.dev/](https://ai.google.dev/)
+
+### Frontend Setup
+
+```cmd
+cd Frontend
+
+REM Install dependencies
+npm install
+
+REM Start dev server
+npm run dev
+```
+
+Frontend will be available at: `http://localhost:5173`
+
+---
+
+## 📊 API Endpoints (Interview Quick Reference)
+
+### System
+- `GET /warmup` - Initialize vector stores
+
+### Content Extraction
+- `POST /extract` - Extract and index content from URL
+- `DELETE /clear-store` - Clear all vector stores
+
+### Chat
+- `POST /chat` - Basic RAG chat (TF-IDF retrieval)
+- `POST /chat/advanced` - Advanced chat (hybrid search + memory)
+- `GET /chat/history/{session_id}` - Get conversation history
+- `DELETE /chat/session/{session_id}` - Clear session
+- `GET /chat/sessions` - List all sessions
+
+### Notes
+- `POST /notes/generate` - Generate study notes for topic
+- `POST /notes/summary` - Quick summary
+- `GET /notes/flashcards/{topic}` - Get flashcards
+- `GET /notes/mind-map/{topic}` - Get mind map
+
+### Quiz
+- `POST /quiz/generate` - Generate MCQs with topic filtering
+- `GET /quiz?count=n` - Generate n questions from all content
+
+---
+
+## 🧠 Interview Talking Points
+
+### What is RAG?
+> "Retrieval-Augmented Generation combines document retrieval with LLM generation. Instead of relying on the model's training data, we retrieve relevant context from a knowledge base and pass it to the LLM for grounded, factual responses."
+
+### How does your RAG pipeline work?
+> "I scrape and clean web content, chunk it into semantic units, vectorize using TF-IDF, and store in a JSON-based vector store. At query time, I compute cosine similarity to retrieve top-k chunks, then pass them as context to Gemini for answer generation."
+
+### What's the difference between TF-IDF and BM25?
+> "Both are lexical search methods. TF-IDF uses term frequency and inverse document frequency for scoring. BM25 improves on this with term frequency saturation and document length normalization - it's more robust for varying document lengths."
+
+### What is Reciprocal Rank Fusion (RRF)?
+> "RRF merges ranked lists from multiple retrieval methods. Instead of blending scores (which have different scales), it uses rank positions: score = sum(1/(k + rank)). This makes it robust when combining TF-IDF and BM25 results."
+
+### How does conversational memory work?
+> "I use LangChain's ConversationBufferMemory to track recent exchanges per session. This lets the system understand context for follow-up questions like 'tell me more' or 'what about X' without re-explaining the conversation history."
+
+### Why chunk documents?
+> "LLMs have token limits (~8k-32k). Smaller chunks give more precise retrieval and fit within context windows. I chunk on sentence/paragraph boundaries to maintain semantic coherence."
+
+### How would you improve this?
+> "Use embeddings (sentence-transformers) for semantic search, add FAISS for fast vector ops, implement caching to reduce API calls, add evaluation metrics (ROUGE, BLEU), and create a feedback loop to improve retrieval quality."
+
+---
+
+## 📝 Resume Bullets (Pick 2-3)
+
+✅ Built **Luma**, an AI learning platform (FastAPI + React) demonstrating RAG pipelines with hybrid search (TF-IDF + BM25 + RRF), conversational memory, and LLM integration for study notes and quiz generation
+
+✅ Implemented **end-to-end RAG system** with web scraping, text chunking, vector indexing (scikit-learn), multiple retrieval strategies, and Gemini API integration with proper error handling and retry logic
+
+✅ Designed **full-stack application** with responsive React UI, FastAPI backend, session-based chat memory (LangChain), and AI-powered content generation using prompt engineering
+
+---
+
+## 📁 Project Structure (Simplified)
 
 ```
 Study AI/
@@ -113,143 +233,141 @@ Study AI/
 │
 ├── .gitignore                          # Git ignore rules (includes .env)
 └── README.md                           # This file
+## 📁 Project Structure (Simplified)
+
+```
+Luma/
+├── Backend/
+│   ├── app.py                      # FastAPI application (main entry)
+│   ├── requirements.txt            # Python dependencies
+│   ├── .env.example               # Environment variable template
+│   │
+│   ├── Routes/                    # API endpoints
+│   │   ├── extract.py            # Content extraction & indexing
+│   │   ├── chat.py               # Basic RAG chat
+│   │   ├── advanced_chat.py      # Hybrid search + memory
+│   │   ├── notes.py              # Study notes generation
+│   │   ├── quiz.py               # Quiz generation
+│   │   └── warmup.py             # System initialization
+│   │
+│   ├── Services/                  # Core business logic
+│   │   ├── gemini_client.py      # LLM API integration
+│   │   ├── text_cleaner.py       # Web scraping & preprocessing
+│   │   ├── simple_rag_service.py # TF-IDF retrieval
+│   │   ├── advanced_rag_service.py # BM25 + Hybrid + RRF
+│   │   ├── conversational_memory.py # Session-based memory
+│   │   └── note_generator.py     # Study materials generation
+│   │
+│   └── vectorstore/               # JSON-based vector stores
+│       ├── simple_store.json     # TF-IDF vectors
+│       └── advanced_store.json   # BM25 + metadata
+│
+├── Frontend/
+│   ├── package.json              # Node dependencies
+│   ├── tailwind.config.js        # Tailwind configuration
+│   │
+│   └── src/
+│       ├── App.jsx               # Main app with routing
+│       ├── index.jsx             # React entry point
+│       │
+│       ├── api/
+│       │   └── backend.js        # Axios API client
+│       │
+│       ├── components/
+│       │   ├── Navbar.jsx        # Navigation
+│       │   ├── ChatSection.jsx   # Chat interface
+│       │   ├── QuizSection.jsx   # Quiz UI
+│       │   └── Loader.jsx        # Loading states
+│       │
+│       └── pages/
+│           ├── Home.jsx          # URL extraction page
+│           ├── Notes.jsx         # Notes generation page
+│           ├── Chat.jsx          # Chat interface page
+│           └── Quiz.jsx          # Quiz page
+│
+└── README.md                      # This file
 ```
 
-## 🔧 Installation & Setup
+---
 
-Prerequisites:
-- Python 3.9+
-- Node.js 16+
-- Google Gemini API key
+## 🎓 Key Concepts Demonstrated
 
-1) Root gitignore and environment
-- A root `.gitignore` is present and ignores environment files.
-- Create `Backend/.env` with your Gemini API key:
+### 1. RAG Pipeline
+- **Ingestion**: Web scraping → text cleaning → chunking
+- **Indexing**: TF-IDF/BM25 vectorization → store in JSON
+- **Retrieval**: Cosine similarity / hybrid search → top-k chunks
+- **Generation**: LLM with context → grounded answers
 
-```bash
-cd Backend
-echo "GEMINI_API_KEY=your_api_key_here" > .env
-```
-
-2) Backend (FastAPI)
-
-```bash
-cd Backend
-python3 -m venv venv
-source venv/bin/activate  # macOS/Linux
-pip install -r requirements.txt
-uvicorn app:app --reload --host 127.0.0.1 --port 8000
-```
-
-Notes:
-- `Backend/Services/gemini_client.py` uses model `gemini-2.5-flash` and includes simple retry logic for rate limits.
-- The service raises an explicit error if `GEMINI_API_KEY` is missing.
-
-3) Frontend (React + Vite)
-
-```bash
-cd Frontend
-npm install
-npm run dev
-```
-
-The frontend expects the backend at `http://127.0.0.1:8000` (see `Frontend/src/api/backend.js`).
-
-## 📊 API Endpoints
-
-Below is a high-level map. See each file under `Backend/Routes/` for request bodies and details.
-
-### System
-- GET `/warmup` — initialize/check RAG stores and system readiness
-
-### Extraction & Indexing (Routes/extract.py)
-- POST `/extract` — extract cleaned text from URL and index into both RAG stores
-- DELETE `/clear-store` — clear simple and advanced RAG stores and reset cached text
-
-### Concepts & Details
-- POST `/concept-detail` — detailed concept explanation using RAG context (Routes/concept_detail.py)
-- Legacy/aux in code (may be disabled in app wiring):
-	- GET `/concepts` — extract concepts from stored text (Routes/concepts.py)
-	- POST `/index` — index raw text directly (Routes/index_text.py)
-
-### Chat
-- POST `/chat` — basic RAG chat (Routes/chat.py)
-
-### Advanced Chat (with memory & hybrid search)
-- POST `/chat/advanced` — chat with conversational memory and hybrid/RRF search (Routes/advanced_chat.py)
-- GET `/chat/history/{session_id}` — get history
-- DELETE `/chat/session/{session_id}` — clear a session
-- GET `/chat/sessions` — list active sessions
-- Legacy/aux in code: POST `/rag_chat` — classic RAG chat (Routes/rag_chat.py)
-
-### Learning Path (Routes/learning_path.py)
-- POST `/learning/record-study` — record a study session
-- POST `/learning/record-quiz` — record quiz performance
-- POST `/learning/recommendations` — personalized topic recommendations
-- GET `/learning/stats/{user_id}` — aggregated learning stats
-- GET `/learning/predict/{user_id}/{topic}` — predict performance
-
-### Notes (Routes/notes.py)
-- POST `/notes/generate` — comprehensive study notes (summary, key points, definitions, flashcards, mind map)
-- POST `/notes/summary` — quick summary for arbitrary content
-- POST `/notes/concepts` — extract key concepts from content
-- GET `/notes/flashcards/{topic}` — flashcards for a topic
-- GET `/notes/mind-map/{topic}` — mind map structure for a topic
-
-### Quiz (Routes/quiz.py)
-- POST `/quiz/generate` — generate MCQs from selected topics (body: `{ count, topics }`)
-- GET `/quiz` — generate MCQs from all available content (`?count=n`)
-
-## 🧠 Advanced Features Explained
-
-### Hybrid Search (TF-IDF + BM25)
-Combine keyword and probabilistic scores:
-
+### 2. Hybrid Search
 ```python
+# Weighted combination
 hybrid_score = (alpha * tfidf_score) + ((1 - alpha) * bm25_score)
+
+# Reciprocal Rank Fusion
+rrf_score = sum(1 / (k + rank_i)) for all retrieval methods
 ```
 
-### Reciprocal Rank Fusion (RRF)
-Merge ranked lists from multiple methods:
+### 3. Prompt Engineering
+Different prompts for different tasks:
+- **Q&A**: "Answer using context, if not found say I don't know"
+- **Notes**: "Generate summary, key points, definitions in structured format"
+- **Quiz**: "Create MCQs with difficulty and explanations"
 
-```python
-rrf_score = Σ(1 / (k + rank_i))
-```
+### 4. Session Management
+- Per-session conversation buffers
+- Query enhancement with conversation context
+- Session lifecycle management
 
-### Conversational Memory
-Session-based memory captures recent exchanges and can enhance subsequent queries prior to retrieval.
+---
 
-## 🧩 Frontend Pages
+## 🐛 Troubleshooting
 
-- Home — extract content from a URL; clear/reset store; toast confirmations
-- Learn — ask questions; uses doc context primarily; allows helpful comparisons when appropriate
-- Quiz — select topics; MCQs with difficulty/type badges; explanations shown after submit
-- Chat — conversational interface (basic)
-- Notes — generate comprehensive notes, flashcards, and mind maps
+**"GEMINI_API_KEY not found"**
+- Required! Create `Backend/.env` file
+- Copy from `.env.example` and add your API key
+- Get free key at [https://ai.google.dev/](https://ai.google.dev/)
 
-UI notes:
-- Notifications: `react-toastify`
-- Loaders: `react-spinners`
-- Icons: `lucide-react`
-- Rendering: plain text with `whitespace-pre-wrap` (markdown removed)
+**"Rate limit exceeded"**
+- Free tier: 50 requests/day
+- Wait 60 seconds between requests
+- Upgrade at [https://ai.google.dev/pricing](https://ai.google.dev/pricing)
 
-## ⚙️ Configuration
+**"No content found"**
+- Extract content from Home page first
+- Vector stores persist in `Backend/vectorstore/` as JSON
+- Use "Clear" button to reset
 
-- Backend Gemini model: `Backend/Services/gemini_client.py`
-- Frontend API base URL: `Frontend/src/api/backend.js`
-- Secrets: `Backend/.env` (ignored by root `.gitignore`)
+**Frontend can't reach backend**
+- Check backend is running on `http://127.0.0.1:8000`
+- Check `Frontend/src/api/backend.js` baseURL setting
 
-## 🧪 Troubleshooting
+---
 
-- "GEMINI_API_KEY not found" → ensure `Backend/.env` contains `GEMINI_API_KEY=...`
-- Frequent 429/quota errors → free-tier daily limits; wait or upgrade
-- Frontend cannot reach backend → verify uvicorn is running and `baseURL` matches
+## 🎯 What Makes This Portfolio-Ready?
 
-## 🔮 Roadmap Ideas
+✅ **Explainable**: Every component has a clear purpose  
+✅ **Production-Ready**: Proper error handling, retry logic, API key management  
+✅ **Interview-Friendly**: Shows RAG, LLMs, full-stack skills  
+✅ **Best Practices**: Session management, CORS, environment variables  
+✅ **Clean Code**: Modular architecture, clear separation of concerns  
+✅ **Modern Stack**: FastAPI, React, Tailwind - industry standard  
 
-- Mock/stub Gemini responses for offline/local dev
-- Basic pytest + httpx smoke tests for routes
-- Single command to run both frontend and backend concurrently
+---
+
+## 🚀 Next Steps / Improvements
+
+When discussing in interviews, mention these potential enhancements:
+
+1. **Better Retrieval**: Replace TF-IDF with embeddings (sentence-transformers)
+2. **Vector DB**: Use FAISS, Pinecone, or Weaviate instead of JSON
+3. **Caching**: Add Redis for LLM response caching
+4. **Evaluation**: Implement ROUGE/BLEU metrics for quality
+5. **Testing**: Add pytest for backend, Jest for frontend
+6. **Deployment**: Dockerize and deploy to AWS/GCP/Azure
+7. **Authentication**: Add user accounts and personal vector stores
+8. **Feedback Loop**: Let users rate answers to improve retrieval
+
+---
 
 ## 📝 License
 
@@ -257,4 +375,5 @@ This project is for learning and portfolio purposes.
 
 ---
 
-Built for learning and experimentation with RAG + AI-assisted study.
+**Built to demonstrate practical AI/ML engineering skills for technical interviews and portfolio reviews.**
+

@@ -9,7 +9,6 @@ export default function Navbar() {
   const navItems = [
     { path: "/", label: "Home", Icon: Home },
     { path: "/notes", label: "Notes", Icon: FileText },
-    { path: "/learn", label: "Learn", Icon: BookOpen },
     { path: "/quiz", label: "Quiz", Icon: CheckCircle },
     { path: "/chat", label: "Chat", Icon: MessageCircle },
   ];

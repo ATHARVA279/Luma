@@ -46,10 +46,13 @@ export default function Learn() {
       if (saved && parsed[conceptKey]) {
         setExplanation(parsed[conceptKey]);
       } else {
-        fetchConceptDetail(conceptFromHome);
+        // Only fetch if not already loaded
+        if (!explanation) {
+          fetchConceptDetail(conceptFromHome);
+        }
       }
     }
-  }, [conceptFromHome]);
+  }, []); // Remove conceptFromHome from dependencies to prevent re-fetching
 
   const fetchConceptDetail = async (conceptText) => {
     setLoading(true);

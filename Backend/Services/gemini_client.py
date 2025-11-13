@@ -11,7 +11,11 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
-    raise RuntimeError("GEMINI_API_KEY not found in environment. Please set it in .env")
+    raise RuntimeError(
+        "GEMINI_API_KEY not found in environment. "
+        "Please set it in Backend/.env file. "
+        "Get your free API key at: https://ai.google.dev/"
+    )
 
 genai.configure(api_key=GEMINI_API_KEY)
 

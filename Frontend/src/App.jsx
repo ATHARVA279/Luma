@@ -1,8 +1,7 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Home from "./pages/Home";
-import Learn from "./pages/Learn";
 import Quiz from "./pages/Quiz";
 import Chat from "./pages/Chat";
 import Notes from "./pages/Notes";
@@ -15,10 +14,9 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/learn" element={<Learn />} />
+          <Route path="/notes" element={<Notes />} />
           <Route path="/quiz" element={<Quiz />} />
           <Route path="/chat" element={<Chat />} />
-          <Route path="/notes" element={<Notes />} />
         </Routes>
         <ToastContainer
           position="top-right"
