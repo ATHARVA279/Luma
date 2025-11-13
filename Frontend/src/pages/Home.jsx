@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Link, Sparkles, Trash2, BookOpen, MessageCircle, CheckCircle, FileText, LayoutDashboard, GraduationCap } from "lucide-react";
+import { Link as LinkIcon, Sparkles, Trash2, Rocket, Target, Settings } from "lucide-react";
 import { toast } from 'react-toastify';
-import { ClipLoader } from 'react-spinners';
+import { PulseLoader } from 'react-spinners';
 import api from "../api/backend";
 import Loader from "../components/Loader";
 import ConceptCard from "../components/ConceptCard";
@@ -31,7 +31,6 @@ export default function Home() {
       setUrl(savedUrl);
     }
 
-    // Warmup ML models on first load
     const initializeML = async () => {
       setInitializingML(true);
       try {
@@ -39,7 +38,7 @@ export default function Home() {
         setMlReady(true);
       } catch (err) {
         console.log("ML warmup skipped, will initialize on first use");
-        setMlReady(true); // Continue anyway
+        setMlReady(true);
       } finally {
         setInitializingML(false);
       }
@@ -67,11 +66,9 @@ export default function Home() {
       };
       const extractedConcepts = res.data.concepts || [];
       
-      // Save to state
       setExtractedInfo(info);
       setConcepts(extractedConcepts);
       
-      // Persist to localStorage
       localStorage.setItem("extractedConcepts", JSON.stringify(extractedConcepts));
       localStorage.setItem("extractedInfo", JSON.stringify(info));
       localStorage.setItem("extractedUrl", url);
@@ -86,7 +83,8 @@ export default function Home() {
   };
 
   const handleConceptClick = (concept) => {
-    navigate("/learn", { state: { concept } });
+    const topicName = typeof concept === 'string' ? concept : concept.title || concept.name || concept;
+    navigate("/notes", { state: { topic: topicName } });
   };
 
   const handleGenerateNotes = (concept) => {
@@ -104,10 +102,8 @@ export default function Home() {
               onClick={async () => {
                 toast.dismiss();
                 try {
-                  // Clear backend vector stores
                   await api.delete("/clear-store");
                   
-                  // Clear frontend localStorage
                   localStorage.removeItem("extractedConcepts");
                   localStorage.removeItem("extractedInfo");
                   localStorage.removeItem("extractedUrl");
@@ -117,71 +113,45 @@ export default function Home() {
                   
                   toast.success("All content cleared successfully!");
                 } catch (err) {
-                  console.error("Clear error:", err);
-                  toast.warning("Failed to clear backend stores, but frontend data was cleared.");
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Yes, Clear
-            </button>
-            <button
-              onClick={() => toast.dismiss()}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>,
-        {
-          position: "top-center",
-          autoClose: false,
-          closeOnClick: false,
-          draggable: false,
-          closeButton: false,
-        }
-      );
-    };
-    confirmClear();
-  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-950 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-8 md:p-12 mb-8 shadow-2xl">
-          <div className="absolute inset-0 bg-black/10"></div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <GraduationCap className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-8 mb-6">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-600 to-red-600 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-white" strokeWidth={2} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white">
                 AI Learning Navigator
               </h1>
+              <p className="text-sm text-slate-400 mt-1">
+                Transform web content into interactive learning experiences
+              </p>
             </div>
-            <p className="text-xl text-white/90 max-w-2xl font-medium">
-              Transform any web content into an interactive learning experience with AI-powered insights
-            </p>
           </div>
         </div>
 
         {initializingML && (
-          <div className="glass-effect rounded-2xl p-4 mb-6 border border-blue-500/30">
-            <p className="text-blue-300 text-sm flex items-center gap-2">
-              <span className="animate-spin">⚙️</span>
+          <div className="bg-slate-900/50 border border-orange-500/30 rounded-xl p-4 mb-6">
+            <p className="text-orange-300 text-sm flex items-center gap-2">
+              <Settings className="w-4 h-4 animate-spin" />
               Initializing AI models (first time only)...
             </p>
           </div>
         )}
 
         {/* Extract Section */}
-        <div className="glass-effect rounded-2xl p-6 md:p-8 mb-8 shadow-xl">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <Link className="w-6 h-6 text-violet-400" />
-            <h2 className="text-2xl font-bold text-white">Extract Content</h2>
+            <div className="w-10 h-10 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
+              <LinkIcon className="w-5 h-5 text-orange-400" strokeWidth={2} />
+            </div>
+            <h2 className="text-xl font-semibold text-white">Extract Content</h2>
           </div>
-          <p className="text-gray-400 mb-6">
+          <p className="text-slate-400 text-sm mb-4">
             Enter any article, documentation, or educational content URL to begin learning
           </p>
           
@@ -192,21 +162,21 @@ export default function Home() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleExtract()}
-              className="flex-1 bg-gray-800/50 text-white border border-gray-700 px-5 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent placeholder-gray-500 transition-all"
+              className="flex-1 bg-slate-900 text-white border border-slate-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder-slate-500 transition-all"
             />
             <button
               onClick={handleExtract}
               disabled={loading}
-              className="gradient-primary hover:shadow-lg hover:shadow-violet-500/50 text-white px-8 py-4 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95"
+              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-medium px-6 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
-                  <ClipLoader color="#ffffff" size={16} />
+                  <PulseLoader color="#ffffff" size={8} />
                   Extracting...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-5 h-5" strokeWidth={2} />
                   Extract & Learn
                 </span>
               )}
@@ -215,20 +185,20 @@ export default function Home() {
               <button
                 onClick={handleClearData}
                 disabled={loading}
-                className="bg-red-600/80 hover:bg-red-600 text-white px-6 py-4 rounded-xl font-semibold disabled:opacity-50 transition-all flex items-center gap-2"
+                className="px-4 py-3 rounded-lg font-medium bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 hover:text-red-300 disabled:opacity-50 transition-all flex items-center gap-2"
                 title="Clear all data and start fresh"
               >
-                <Trash2 className="w-4 h-4" />
-                Clear
+                <Trash2 className="w-5 h-5" strokeWidth={2} />
+                <span className="hidden sm:inline">Clear</span>
               </button>
             )}
           </div>
         </div>
 
         {loading && (
-          <div className="glass-effect rounded-2xl p-12 mb-8 text-center">
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-12 mb-6 text-center">
             <Loader />
-            <p className="text-gray-400 mt-4 font-medium">
+            <p className="text-slate-400 mt-4 text-sm">
               Analyzing content with AI... This may take a moment
             </p>
           </div>
@@ -236,36 +206,26 @@ export default function Home() {
 
         {concepts.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🎯</span>
-                <h3 className="text-2xl font-bold text-white">
+                <div className="w-10 h-10 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
+                  <Target className="w-5 h-5 text-orange-400" strokeWidth={2} />
+                </div>
+                <h3 className="text-xl font-semibold text-white">
                   Key Concepts
                 </h3>
               </div>
-              <div className="text-sm text-gray-400">
-                Click to learn • Right-click for notes
+              <div className="text-sm text-slate-400 hidden sm:block">
+                Click to generate notes
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {concepts.map((concept, i) => (
-                <div key={i} className="group relative">
-                  <div 
-                    onClick={() => handleConceptClick(concept)} 
-                    className="cursor-pointer"
-                  >
-                    <ConceptCard concept={concept} />
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleGenerateNotes(concept);
-                    }}
-                    className="absolute top-3 right-3 bg-violet-600 hover:bg-violet-700 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110 shadow-lg"
-                    title="Generate notes for this concept"
-                  >
-                    📝
-                  </button>
+                <div 
+                  key={i}
+                  onClick={() => handleConceptClick(concept)}
+                >
+                  <ConceptCard concept={concept} />
                 </div>
               ))}
             </div>
@@ -273,10 +233,12 @@ export default function Home() {
         )}
 
         {!concepts.length && !loading && !extractedInfo && (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🚀</div>
-            <h3 className="text-2xl font-bold text-white mb-2">Ready to Start Learning?</h3>
-            <p className="text-gray-400 max-w-md mx-auto">
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
+              <Rocket className="w-8 h-8 text-orange-400" strokeWidth={2} />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">Ready to Start Learning?</h3>
+            <p className="text-slate-400 text-sm max-w-md mx-auto">
               Enter a URL above to extract content and unlock all AI-powered learning features
             </p>
           </div>

@@ -1,7 +1,6 @@
-# Backend/Services/simple_rag_service.py
 """
 Simple RAG service using TF-IDF and keyword matching instead of embeddings.
-No external ML dependencies required.
+Multi-user support with session-based storage.
 """
 import os
 import json
@@ -10,32 +9,31 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
-# Storage
-PERSIST_FILE = os.path.join(os.path.dirname(__file__), "..", "vectorstore", "simple_store.json")
-_documents = []  # List of {"content": str, "source": str}
-_vectorizer = None
-_tfidf_matrix = None
+VECTORSTORE_DIR = os.path.join(os.path.dirname(__file__), "..", "vectorstore")
+
+_session_cache = {}
 
 def _ensure_storage_dir():
-    os.makedirs(os.path.dirname(PERSIST_FILE), exist_ok=True)
+    os.makedirs(VECTORSTORE_DIR, exist_ok=True)
 
-def _load_documents():
-    """Load documents from disk"""
-    global _documents
+def _get_persist_file(session_id: str) -> str:
+    return os.path.join(VECTORSTORE_DIR, f"simple_store_{session_id}.json")
+
+def _load_documents(session_id: str):
     _ensure_storage_dir()
-    if os.path.exists(PERSIST_FILE):
-        with open(PERSIST_FILE, 'r', encoding='utf-8') as f:
-            _documents = json.load(f)
-    return _documents
+    persist_file = _get_persist_file(session_id)
+    
+    if os.path.exists(persist_file):
+        with open(persist_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
 
 def _save_documents():
-    """Save documents to disk"""
     _ensure_storage_dir()
     with open(PERSIST_FILE, 'w', encoding='utf-8') as f:
         json.dump(_documents, f, indent=2)
 
 def _chunk_text(text: str, chunk_size: int = 800, overlap: int = 100) -> List[str]:
-    """Simple text chunking"""
     chunks = []
     start = 0
     while start < len(text):

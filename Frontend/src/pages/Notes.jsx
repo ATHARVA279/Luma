@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { FileText, Sparkles, BookOpen, Lightbulb, Brain, MessageSquare, ChevronLeft, ChevronRight, Target } from "lucide-react";
+import { FileText, Sparkles, BookOpen, Lightbulb, Brain, MessageSquare, ChevronLeft, ChevronRight, Target, Clock, BarChart3 } from "lucide-react";
 import { toast } from 'react-toastify';
-import { PulseLoader, ClimbingBoxLoader } from 'react-spinners';
+import { PulseLoader } from 'react-spinners';
 import api from "../api/backend";
 import Loader from "../components/Loader";
 import NoContentMessage from "../components/NoContentMessage";
@@ -101,54 +101,52 @@ export default function Notes() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
+    <div className="min-h-screen bg-slate-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 p-8 mb-8 shadow-2xl">
-          <div className="absolute inset-0 bg-black/10"></div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <FileText className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold text-white tracking-tight">AI Study Notes</h1>
+        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-600 to-red-600 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" strokeWidth={2} />
             </div>
-            <p className="text-xl text-white/90 font-medium">
-              Automated notes, flashcards, mind maps, and practice questions
-            </p>
+            <div>
+              <h1 className="text-xl font-semibold text-white">
+                AI Study Notes
+              </h1>
+              <p className="text-sm text-slate-400">
+                Automated notes, flashcards, mind maps, and practice questions
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Suggested Topics */}
         {suggestedTopics.length > 0 && !notes && (
-          <div className="glass-effect rounded-2xl p-6 mb-6">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-yellow-400" />
-              <span>Suggested Topics from Your Content</span>
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-6">
+            <h3 className="text-base font-medium text-white mb-4 flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-yellow-400" strokeWidth={2} />
+              <span>Suggested Topics</span>
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {suggestedTopics.map((item, i) => {
                 const conceptText = typeof item === 'string' ? item : item.title || item.name || item;
                 return (
                   <button
                     key={i}
                     onClick={() => handleSuggestionClick(item)}
-                    className="glass-effect hover:bg-white/10 p-3 rounded-xl text-sm text-gray-300 border border-teal-500/30 hover:border-teal-500 transition-all text-left"
+                    className="bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-orange-500/50 rounded-lg p-3 text-sm text-slate-300 hover:text-white transition-all text-left"
                   >
-                    <Target className="w-4 h-4 inline-block mr-2 text-teal-400" />
+                    <Target className="w-4 h-4 inline-block mr-2 text-orange-400" strokeWidth={2} />
                     {conceptText}
                   </button>
                 );
               })}
             </div>
-            <p className="text-gray-400 text-sm mt-4">
-              💡 Tip: Click any topic above or enter a custom topic to generate comprehensive study notes
-            </p>
           </div>
         )}
 
         {/* Input Section */}
-        <div className="glass-effect rounded-2xl p-6 mb-6 shadow-xl">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
@@ -156,13 +154,13 @@ export default function Notes() {
               onChange={(e) => setTopic(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && generateNotes()}
               placeholder="Enter topic (e.g., Event Loop, Async Programming...)"
-              className="flex-1 bg-gray-800/50 text-white border border-gray-700 px-5 py-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder-gray-500 transition-all"
+              className="flex-1 bg-slate-900 text-white border border-slate-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder-slate-500 text-sm transition-all"
               disabled={loading}
             />
             <button
               onClick={() => generateNotes()}
               disabled={loading}
-              className="gradient-success hover:shadow-lg hover:shadow-teal-500/50 text-white px-8 py-4 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 justify-center"
+              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-medium px-6 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
             >
               {loading ? (
                 <>
@@ -171,69 +169,70 @@ export default function Notes() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-5 h-5" />
+                  <Sparkles className="w-5 h-5" strokeWidth={2} />
                   Generate Notes
                 </>
               )}
             </button>
           </div>
-          {!notes && suggestedTopics.length > 0 && (
-            <p className="text-gray-500 text-sm mt-3">
-              Select a suggested topic above or type any keyword from your extracted content
-            </p>
-          )}
         </div>
 
         {loading && (
-          <div className="glass-effect rounded-2xl p-12 text-center">
-            <ClimbingBoxLoader color="#14b8a6" size={15} />
-            <p className="text-gray-400 mt-6 font-medium">Generating comprehensive study notes with AI...</p>
-            <p className="text-gray-500 text-sm mt-2">This may take a moment</p>
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
+            <Loader />
+            <p className="text-slate-300 mt-4 text-sm">Generating comprehensive study notes with AI...</p>
+            <p className="text-slate-500 text-xs mt-2">This may take a moment</p>
           </div>
         )}
 
         {notes && !loading && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Back Button */}
             <button
               onClick={() => {
                 setNotes(null);
                 setTopic("");
               }}
-              className="glass-effect hover:bg-white/10 text-gray-300 hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm"
+              className="bg-slate-900/50 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" strokeWidth={2} />
               Generate Different Notes
             </button>
 
             {/* Summary */}
-            <div className="glass-effect rounded-2xl p-6 shadow-xl border border-teal-500/30">
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                  <BookOpen className="w-6 h-6 text-teal-400" />
+                <h2 className="text-lg font-semibold text-white flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
+                    <BookOpen className="w-5 h-5 text-orange-400" strokeWidth={2} />
+                  </div>
                   Summary
                 </h2>
-                <div className="flex gap-3 text-sm">
-                  <span className="glass-effect px-3 py-1 rounded-lg text-gray-300 flex items-center gap-1">
-                    ⏱️ {notes.estimated_study_time} min
+                <div className="flex gap-2 text-xs">
+                  <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium">
+                    <Clock className="w-3.5 h-3.5" strokeWidth={2} />
+                    {notes.estimated_study_time} min
                   </span>
-                  <span className="glass-effect px-3 py-1 rounded-lg text-gray-300">
-                    📊 {notes.difficulty_level}
+                  <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium">
+                    <BarChart3 className="w-3.5 h-3.5" strokeWidth={2} />
+                    {notes.difficulty_level}
                   </span>
                 </div>
               </div>
-              <div className="text-gray-300 whitespace-pre-wrap text-lg leading-relaxed">
+              <div className="text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
                 {notes.summary}
               </div>
             </div>
 
             {/* Key Points */}
-            <div className="glass-effect rounded-2xl p-6 shadow-xl">
-              <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                <Target className="w-6 h-6 text-emerald-400" />
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
+                  <Target className="w-5 h-5 text-orange-400" strokeWidth={2} />
+                </div>
                 Key Points
               </h2>
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {notes.key_points && notes.key_points.map((point, i) => {
                   // Handle both string and object formats
                   const pointText = typeof point === 'string' 
@@ -241,11 +240,11 @@ export default function Notes() {
                     : point.point || point.text || point.title || JSON.stringify(point);
                   
                   return (
-                    <li key={i} className="flex items-start gap-3 glass-effect p-4 rounded-xl hover:bg-white/5 transition-all">
-                      <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
+                    <li key={i} className="flex items-start gap-3 bg-slate-800/30 border border-slate-800 rounded-lg p-3 hover:border-slate-700 transition-all">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-md bg-gradient-to-br from-orange-600 to-red-600 flex items-center justify-center text-white font-medium text-xs">
                         {i + 1}
                       </span>
-                      <span className="text-gray-300 flex-1">{pointText}</span>
+                      <span className="text-slate-300 text-sm flex-1">{pointText}</span>
                     </li>
                   );
                 })}
