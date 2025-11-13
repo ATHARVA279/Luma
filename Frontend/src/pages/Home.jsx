@@ -113,6 +113,33 @@ export default function Home() {
                   
                   toast.success("All content cleared successfully!");
                 } catch (err) {
+                  console.error("Clear error:", err);
+                  toast.warning("Failed to clear backend stores, but frontend data was cleared.");
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              Yes, Clear
+            </button>
+            <button
+              onClick={() => toast.dismiss()}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>,
+        {
+          position: "top-center",
+          autoClose: false,
+          closeOnClick: false,
+          draggable: false,
+          closeButton: false,
+        }
+      );
+    };
+    confirmClear();
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-6 lg:p-8">
