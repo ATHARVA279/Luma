@@ -4,6 +4,11 @@ An AI-powered learning platform that demonstrates **RAG (Retrieval-Augmented Gen
 
 **Perfect for portfolios and technical interviews** - showcases practical AI/ML skills with explainable, production-ready features.
 
+## 🌐 Live Demo
+
+- **Frontend:** https://project-luma.vercel.app/
+- **Backend API:** https://luma-2zgh.onrender.com/
+
 ---
 
 ## 🎯 Core Features (5 Essential)
