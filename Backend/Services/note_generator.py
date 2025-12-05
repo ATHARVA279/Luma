@@ -1,19 +1,12 @@
-# Backend/Services/note_generator.py
-"""
-Automated Note Generation using NLP and Gemini
-Creates comprehensive study materials from content
-"""
 from typing import List, Dict
 import google.generativeai as genai
 import os
 import re
 import time
 
-# Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def _extract_retry_delay(error_message: str) -> int:
-    """Extract retry delay from error message"""
     match = re.search(r'retry in (\d+)', error_message, re.IGNORECASE)
     if match:
         return int(match.group(1))
@@ -23,7 +16,6 @@ def _extract_retry_delay(error_message: str) -> int:
     return 60
 
 def _call_gemini_with_retry(model, prompt: str, max_retries: int = 2) -> str:
-    """Call Gemini with retry logic for rate limits"""
     for attempt in range(max_retries):
         try:
             response = model.generate_content(prompt)
@@ -33,7 +25,7 @@ def _call_gemini_with_retry(model, prompt: str, max_retries: int = 2) -> str:
             
             if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
                 if attempt < max_retries - 1:
-                    print(f"⏳ Rate limit hit. Retrying attempt {attempt + 1}/{max_retries}...")
+                    print(f"Rate limit hit. Retrying attempt {attempt + 1}/{max_retries}...")
                     continue
                 else:
                     retry_delay = _extract_retry_delay(error_str)
@@ -47,19 +39,12 @@ def _call_gemini_with_retry(model, prompt: str, max_retries: int = 2) -> str:
     raise Exception("Failed after retries")
 
 def _get_model():
-    """Get Gemini model instance"""
     return genai.GenerativeModel("gemini-2.0-flash")
 
 def generate_study_notes(content: str, topic: str = "General") -> Dict:
-    """
-    Generate comprehensive study notes including:
-    - Summary, Key points, Definitions, Mind map, Flashcards
-    """
-    
     model = _get_model()
     
     try:
-        # Generate summary
         summary_prompt = f"""Analyze this content about "{topic}" and provide a concise summary (3-4 sentences):
 
 Content:
@@ -69,33 +54,26 @@ Summary:"""
         
         summary = _call_gemini_with_retry(model, summary_prompt).strip()
         
-        # Generate key points
         key_points_prompt = f"""Extract 5-7 key points from "{topic}". Return as JSON array of strings:
 
 {content[:3000]}"""
         
         key_points_text = _call_gemini_with_retry(model, key_points_prompt).strip()
         key_points_raw = _parse_json_array(key_points_text)
-        # Normalize key points to always be strings
         key_points = _normalize_key_points(key_points_raw)
         
-        # Generate definitions
         definitions_prompt = f"""Extract important terms and definitions from "{topic}". Return as JSON object with term:definition pairs:
 
 {content[:3000]}"""
         
         definitions_text = _call_gemini_with_retry(model, definitions_prompt).strip()
         definitions_raw = _parse_json_object(definitions_text)
-        # Normalize definitions
         definitions = _normalize_definitions(definitions_raw)
         
-        # Generate flashcards
         flashcards = _generate_flashcards(content, topic, model)
         
-        # Generate mind map structure
         mind_map = _generate_mind_map(key_points, topic)
         
-        # Extract practice questions
         practice_questions = _generate_practice_questions(content, topic, model)
         
         return {
@@ -111,11 +89,10 @@ Summary:"""
         }
     except Exception as e:
         error_msg = str(e)
-        print(f"❌ Note generation error: {error_msg}")
+        print(f"Note generation error: {error_msg}")
         raise Exception(f"Note generation failed: {error_msg}")
 
 def generate_quick_summary(content: str, max_sentences: int = 3) -> str:
-    """Generate a quick summary of content"""
     model = _get_model()
     
     prompt = f"""Provide a {max_sentences}-sentence summary:
@@ -128,7 +105,6 @@ def generate_quick_summary(content: str, max_sentences: int = 3) -> str:
         return f"Summary unavailable due to rate limits: {str(e)}"
 
 def extract_key_concepts(content: str, top_n: int = 10) -> List[str]:
-    """Extract main concepts using Gemini"""
     model = _get_model()
     
     prompt = f"""Extract the top {top_n} key concepts. Return as JSON array:
@@ -139,8 +115,6 @@ def extract_key_concepts(content: str, top_n: int = 10) -> List[str]:
     return _parse_json_array(result)
 
 def _generate_flashcards(content: str, topic: str, model) -> List[Dict]:
-    """Generate flashcards for spaced repetition"""
-    
     prompt = f"""Create 5 flashcards for "{topic}" with question and answer. Return as JSON array:
 
 {content[:2000]}"""
@@ -157,15 +131,12 @@ def _generate_flashcards(content: str, topic: str, model) -> List[Dict]:
     return flashcards_data
 
 def _generate_mind_map(key_points: List[str], topic: str) -> Dict:
-    """Generate mind map structure"""
-    
     mind_map = {
         "central_topic": topic,
         "branches": []
     }
     
     for i, point in enumerate(key_points[:6]):
-        # Ensure point is a string
         if isinstance(point, dict):
             point_text = point.get('text', '') or point.get('title', '') or str(point)
         else:
@@ -184,8 +155,6 @@ def _generate_mind_map(key_points: List[str], topic: str) -> Dict:
     return mind_map
 
 def _generate_practice_questions(content: str, topic: str, model) -> List[Dict]:
-    """Generate practice questions"""
-    
     prompt = f"""Create 3 practice questions about "{topic}". Return as JSON array:
 
 {content[:2000]}"""
@@ -205,8 +174,6 @@ def _generate_practice_questions(content: str, topic: str, model) -> List[Dict]:
     return questions
 
 def _estimate_study_time(content: str) -> int:
-    """Estimate study time in minutes based on content length"""
-    # Ensure content is a string
     if not isinstance(content, str):
         content = str(content)
     
@@ -216,9 +183,6 @@ def _estimate_study_time(content: str) -> int:
     return max(5, int(study_time))
 
 def _estimate_difficulty(key_points: List[str], definitions: Dict) -> str:
-    """Estimate content difficulty level"""
-    
-    # Handle mixed types in key_points
     total_words = 0
     for p in key_points:
         if isinstance(p, dict):
@@ -238,22 +202,18 @@ def _estimate_difficulty(key_points: List[str], definitions: Dict) -> str:
         return "Beginner"
 
 def _parse_json_array(text: str, default: List = None) -> List:
-    """Parse JSON array from text, with fallback"""
     import json
     
     if default is None:
         default = []
     
     try:
-        # Remove markdown code blocks
         text = re.sub(r'```json\s*', '', text)
         text = re.sub(r'```\s*', '', text)
         text = text.strip()
         
-        # Try direct parse
         return json.loads(text)
     except:
-        # Try to find array in text
         match = re.search(r'\[.*\]', text, re.DOTALL)
         if match:
             try:
@@ -261,7 +221,6 @@ def _parse_json_array(text: str, default: List = None) -> List:
             except:
                 pass
         
-        # Fallback: split by newlines
         lines = [line.strip() for line in text.split('\n') if line.strip()]
         if lines:
             return [line.strip('- ').strip() for line in lines[:10]]
@@ -269,22 +228,18 @@ def _parse_json_array(text: str, default: List = None) -> List:
         return default
 
 def _parse_json_object(text: str, default: Dict = None) -> Dict:
-    """Parse JSON object from text, with fallback"""
     import json
     
     if default is None:
         default = {}
     
     try:
-        # Remove markdown code blocks
         text = re.sub(r'```json\s*', '', text)
         text = re.sub(r'```\s*', '', text)
         text = text.strip()
         
-        # Try direct parse
         return json.loads(text)
     except:
-        # Try to find object in text
         match = re.search(r'\{.*\}', text, re.DOTALL)
         if match:
             try:
@@ -295,11 +250,9 @@ def _parse_json_object(text: str, default: Dict = None) -> Dict:
         return default
 
 def _normalize_key_points(key_points: List) -> List[str]:
-    """Normalize key points to always be strings"""
     normalized = []
     for point in key_points:
         if isinstance(point, dict):
-            # Try to extract text from common keys
             text = point.get('point', '') or point.get('text', '') or point.get('description', '') or str(point)
             normalized.append(text)
         elif isinstance(point, str):
@@ -309,9 +262,7 @@ def _normalize_key_points(key_points: List) -> List[str]:
     return normalized
 
 def _normalize_definitions(definitions) -> Dict[str, str]:
-    """Normalize definitions to always be a dict of string:string"""
     if isinstance(definitions, list):
-        # Convert array of term/definition objects to dict
         result = {}
         for item in definitions:
             if isinstance(item, dict):
@@ -321,12 +272,10 @@ def _normalize_definitions(definitions) -> Dict[str, str]:
                     result[term] = definition
         return result
     elif isinstance(definitions, dict):
-        # Check if it's wrapped in a "terms" or "definitions" key
         if 'terms' in definitions and isinstance(definitions['terms'], list):
             return _normalize_definitions(definitions['terms'])
         elif 'definitions' in definitions:
             return _normalize_definitions(definitions['definitions'])
         else:
-            # Already in correct format, just ensure values are strings
             return {k: str(v) if not isinstance(v, str) else v for k, v in definitions.items()}
     return {}

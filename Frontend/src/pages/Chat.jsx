@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, Send, Trash2, Settings } from "lucide-react";
+import { MessageCircle, Send, Trash2, Settings, Bot, User, Sparkles } from "lucide-react";
 import { toast } from 'react-toastify';
 import { PulseLoader } from 'react-spinners';
 import api from "../api/backend";
-import Loader from "../components/Loader";
 import NoContentMessage from "../components/NoContentMessage";
 import { hasExtractedContent } from "../utils/contentCheck";
+import PageLayout from "../components/layout/PageLayout";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import Card from "../components/ui/Card";
+import Badge from "../components/ui/Badge";
 
 export default function Chat() {
   const [input, setInput] = useState("");
@@ -15,9 +19,12 @@ export default function Chat() {
   const [searchMethod, setSearchMethod] = useState("hybrid");
   const messagesEndRef = useRef(null);
 
-  // Check if content exists
   if (!hasExtractedContent()) {
-    return <NoContentMessage feature="the Chat feature" />;
+    return (
+      <PageLayout>
+        <NoContentMessage feature="the Chat feature" />
+      </PageLayout>
+    );
   }
 
   useEffect(() => {
@@ -38,17 +45,20 @@ export default function Chat() {
     setInput("");
     setLoading(true);
 
+    const documentId = localStorage.getItem("extractedDocumentId");
+
     try {
-      const res = await api.post("/chat/advanced", { 
+      const res = await api.post("/chat/advanced", {
         question: input,
         session_id: sessionId,
         search_method: searchMethod,
         use_memory: true,
-        top_k: 4
+        top_k: 4,
+        document_id: documentId
       });
-      
-      const aiMessage = { 
-        role: "ai", 
+
+      const aiMessage = {
+        role: "ai",
         text: res.data.answer,
         sources: res.data.sources_used,
         searchScores: res.data.search_scores,
@@ -57,10 +67,10 @@ export default function Chat() {
       setMessages(prev => [...prev, aiMessage]);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to get response. Make sure you've extracted content first.");
-      const errorMessage = { 
-        role: "ai", 
-        text: "Sorry, I couldn't process that. Make sure you've extracted content first." 
+      toast.error("Failed to get response.");
+      const errorMessage = {
+        role: "ai",
+        text: "Sorry, I couldn't process that. Please try again."
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -74,123 +84,121 @@ export default function Chat() {
     toast.success("Chat cleared!");
   };
 
-  const getSearchMethodInfo = () => {
-    const info = {
-      hybrid: { name: "Balanced", desc: "Best for most questions" },
-      rrf: { name: "Most Accurate", desc: "Combines multiple methods" },
-      tfidf: { name: "Keyword Match", desc: "Fast keyword-based search" },
-      bm25: { name: "Context Search", desc: "Understands context better" }
-    };
-    return info[searchMethod] || info.hybrid;
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
+    <PageLayout className="h-[calc(100vh-4rem)] flex flex-col py-0">
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full h-full pt-6 pb-6">
         {/* Header */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-600 to-red-600 flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-white" strokeWidth={2} />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">AI Chat Assistant</h2>
-                <p className="text-sm text-slate-400">Ask questions about your extracted content</p>
-              </div>
-            </div>
-            <div className="flex gap-3 items-center">
-              <select 
-                value={searchMethod}
-                onChange={(e) => setSearchMethod(e.target.value)}
-                className="bg-slate-900 text-white px-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-              >
-                <option value="hybrid">Balanced</option>
-                <option value="rrf">Most Accurate</option>
-                <option value="tfidf">Keyword Match</option>
-                <option value="bm25">Context Search</option>
-              </select>
-              <button 
-                onClick={clearChat}
-                className="bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 hover:text-red-300 px-3 py-2 rounded-lg transition-all flex items-center gap-2"
-                title="Clear conversation history"
-              >
-                <Trash2 className="w-4 h-4" strokeWidth={2} />
-                <span className="hidden sm:inline text-sm">Clear</span>
-              </button>
-            </div>
+        <div className="flex items-center justify-between mb-6 px-4">
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-100 flex items-center gap-2">
+              <MessageCircle className="w-6 h-6 text-violet-500" />
+              Chat Assistant
+            </h1>
+            <p className="text-sm text-zinc-400">Ask questions about your document</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <select
+              value={searchMethod}
+              onChange={(e) => setSearchMethod(e.target.value)}
+              className="bg-zinc-900 text-zinc-300 text-sm border border-zinc-800 rounded-lg px-3 py-1.5 focus:outline-none focus:border-violet-500"
+            >
+              <option value="hybrid">Balanced</option>
+              <option value="rrf">Accurate</option>
+              <option value="tfidf">Fast</option>
+            </select>
+            <Button variant="ghost" size="sm" onClick={clearChat} className="text-zinc-500 hover:text-red-400">
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl p-6 overflow-y-auto mb-4 space-y-4">
-          {messages.length === 0 && (
-            <div className="text-center text-slate-400 mt-12">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
-                <MessageCircle className="w-8 h-8 text-orange-400" strokeWidth={2} />
+        {/* Messages Area */}
+        <Card className="flex-1 overflow-y-auto mb-4 bg-zinc-900/30 border-zinc-800/50 p-0 flex flex-col">
+          <div className="flex-1 p-6 space-y-6">
+            {messages.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500">
+                <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 border border-zinc-800">
+                  <Bot className="w-8 h-8 text-violet-500" />
+                </div>
+                <h3 className="text-lg font-medium text-zinc-300 mb-2">How can I help you?</h3>
+                <p className="text-sm max-w-xs mx-auto">
+                  Ask me to summarize the document, explain complex concepts, or find specific details.
+                </p>
               </div>
-              <p className="text-base mb-2">Hi! I'm your AI learning assistant.</p>
-              <p className="text-sm">Ask me anything about the content you've extracted!</p>
-            </div>
-          )}
+            )}
 
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[75%] rounded-lg p-4 ${
-                msg.role === "user" 
-                  ? "bg-gradient-to-br from-orange-600 to-red-600 text-white" 
-                  : "bg-slate-800/50 border border-slate-700 text-slate-100"
-              }`}>
-                <p className="whitespace-pre-wrap text-sm">{msg.text}</p>
-                {msg.enhanced && (
-                  <p className="text-xs mt-2 opacity-75">
-                    Enhanced with conversation context
-                  </p>
-                )}
-                {msg.sources > 0 && (
-                  <p className="text-xs mt-2 opacity-75">
-                    Found in {msg.sources} source{msg.sources > 1 ? 's' : ''}
-                  </p>
-                )}
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+                <div className={`
+                  w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
+                  ${msg.role === "user" ? "bg-zinc-800" : "bg-violet-600"}
+                `}>
+                  {msg.role === "user" ? <User className="w-4 h-4 text-zinc-400" /> : <Bot className="w-4 h-4 text-white" />}
+                </div>
+
+                <div className={`max-w-[80%] space-y-2`}>
+                  <div className={`
+                    p-4 rounded-2xl text-sm leading-relaxed
+                    ${msg.role === "user"
+                      ? "bg-zinc-800 text-zinc-100 rounded-tr-none"
+                      : "bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-tl-none"
+                    }
+                  `}>
+                    <p className="whitespace-pre-wrap">{msg.text}</p>
+                  </div>
+
+                  {msg.role === "ai" && (
+                    <div className="flex gap-2 pl-1">
+                      {msg.enhanced && (
+                        <Badge variant="violet" className="text-[10px] px-1.5 py-0">Enhanced Context</Badge>
+                      )}
+                      {msg.sources > 0 && (
+                        <Badge variant="default" className="text-[10px] px-1.5 py-0">{msg.sources} Sources</Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {loading && (
-            <div className="flex justify-start">
-              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-                <PulseLoader color="#f97316" size={8} />
-                <p className="text-slate-400 text-xs mt-2">Thinking...</p>
+            {loading && (
+              <div className="flex gap-4">
+                <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl rounded-tl-none">
+                  <PulseLoader color="#8b5cf6" size={6} />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </Card>
 
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-              placeholder="Ask a question about your content..."
-              className="flex-1 bg-slate-900 text-white border border-slate-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-500 text-sm"
-              disabled={loading}
-            />
-            <button
+        {/* Input Area */}
+        <div className="relative">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            placeholder="Ask a question..."
+            className="pr-24 py-4 bg-zinc-900 border-zinc-800 focus:border-violet-500 shadow-lg"
+            disabled={loading}
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            <Button
+              size="sm"
+              variant="gradient"
               onClick={sendMessage}
               disabled={loading || !input.trim()}
-              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              className="h-9 w-9 p-0 rounded-lg"
             >
-              <Send className="w-4 h-4" strokeWidth={2} />
-              <span className="hidden sm:inline">Send</span>
-            </button>
+              <Send className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }

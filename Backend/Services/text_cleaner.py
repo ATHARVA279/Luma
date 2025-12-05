@@ -7,21 +7,15 @@ HEADERS = {
 }
 
 def extract_text_from_url(url: str) -> str:
-    """
-    Fetch the URL and extract readable text (paragraphs, headings).
-    Returns cleaned text string.
-    """
     resp = requests.get(url, headers=HEADERS, timeout=15)
     resp.raise_for_status()
     html = resp.text
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # remove script/style elements
     for s in soup(["script", "style", "noscript", "header", "footer", "nav"]):
         s.decompose()
 
-    # gather heading and paragraph text
     texts = []
     for tag in soup.find_all(["h1", "h2", "h3", "p", "li"]):
         t = tag.get_text(" ", strip=True)
@@ -30,7 +24,6 @@ def extract_text_from_url(url: str) -> str:
 
     full = "\n\n".join(texts)
 
-    # basic cleanup: collapse spaces, remove weird chars
     cleaned = re.sub(r"\s{2,}", " ", full)
     cleaned = re.sub(r"\u200b", "", cleaned)
     cleaned = cleaned.strip()

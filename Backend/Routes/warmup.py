@@ -1,53 +1,71 @@
-from fastapi import APIRouter
-from Services import simple_rag_service as simple_rag
-from Services import advanced_rag_service as advanced_rag
+from fastapi import APIRouter, Request
+from config import Config
 
 router = APIRouter()
 
+@router.get("/rate-limit/status")
+def get_rate_limit_status(request: Request):
+    return {
+        "quotas": {
+            "quiz": Config.RATE_LIMIT_QUIZ,
+            "notes": Config.RATE_LIMIT_NOTES,
+            "chat": Config.RATE_LIMIT_CHAT,
+            "extraction": Config.RATE_LIMIT_EXTRACT
+        },
+        "reset_period": "Per minute/hour based on endpoint",
+        "message": "Limits are applied per user."
+    }
+
 @router.get("/warmup")
-def warmup_ml_models():
-    """
-    Warmup endpoint to initialize both RAG services and check system status.
-    """
+async def warmup_system():
     try:
-        # Get store info from both RAG systems
-        simple_info = simple_rag.get_store_info()
-        advanced_info = advanced_rag.get_store_info()
+        from Database.database import get_db
+        db = await get_db()
+        
+        doc_count = await db.documents.count_documents({})
         
         return {
             "status": "ready",
             "message": "Luma - All systems operational",
+            "database": {
+                "status": "connected",
+                "documents": doc_count
+            },
             "features": {
                 "rag": {
-                    "simple": "TF-IDF (backward compatible)",
-                    "advanced": "Hybrid Search (TF-IDF + BM25 + RRF)",
-                    "simple_store": simple_info,
-                    "advanced_store": advanced_info
+                    "storage": "MongoDB-backed BM25 search",
+                    "search": "Persistent vector store with user-scoped data"
                 },
                 "chat": {
                     "basic": "Simple Q&A with RAG",
                     "advanced": "Conversational memory + context-aware search"
                 },
                 "learning": {
-                    "adaptive_path": "ML-based recommendations",
-                    "progress_tracking": "User performance analytics",
-                    "spaced_repetition": "Optimized review scheduling"
+                    "extraction": "URL content extraction with chunking",
+                    "quiz_generation": "AI-powered quiz creation",
+                    "note_generation": "Automated study notes"
                 },
                 "notes": {
                     "generation": "AI-powered study notes",
                     "flashcards": "Automatic flashcard creation",
-                    "mind_maps": "Visual knowledge structures"
+                    "mind_maps": "Visual knowledge structures",
+                    "caching": "MongoDB-based persistence"
                 }
             },
             "ml_models": [
-                "Google Gemini 2.0 Flash (LLM)",
-                "scikit-learn TF-IDF (keyword search)",
+                f"Google Gemini {Config.GEMINI_MODEL} (LLM)",
                 "BM25 (probabilistic ranking)",
-                "Cosine Similarity (semantic matching)"
-            ]
+                "MongoDB Atlas Search (vector storage)"
+            ],
+            "configuration": {
+                "chunk_size": Config.DEFAULT_CHUNK_SIZE,
+                "chunk_overlap": Config.DEFAULT_CHUNK_OVERLAP,
+                "quiz_range": f"{Config.MIN_QUIZ_QUESTIONS}-{Config.MAX_QUIZ_QUESTIONS} questions"
+            }
         }
     except Exception as e:
         return {
             "status": "error",
-            "message": f"System initialization failed: {str(e)}"
+            "message": f"System initialization failed: {str(e)}",
+            "details": "Check database connection and environment variables"
         }

@@ -4,6 +4,7 @@
 .env.development.local
 .env.test.local
 .env.production.local
+serviceAccountKey.json
 
 # Python
 __pycache__/
@@ -52,3 +53,4 @@ yarn-error.log*
 .coverage
 htmlcov/
 .pytest_cache/
+Backend/start.bat

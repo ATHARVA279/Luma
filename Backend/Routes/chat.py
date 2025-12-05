@@ -1,76 +1,55 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import Optional, List
 from Services.gemini_client import ask_question_about_text
-from Services import simple_rag_service as rag_service
+from Services.persistent_vector_store import PersistentVectorStore
+from Middleware.auth import get_current_user
+from Middleware.rate_limit import limit_chat
+from Services.chat_utils import get_general_response
+
 
 router = APIRouter()
 
-_stored_text = ""
+from models.requests import ChatRequest
 
-class ChatRequest(BaseModel):
-    question: str
-    history: Optional[List[dict]] = []
-    top_k: int = 4
-
-@router.post("/chat")
-def chat_with_document(req: ChatRequest):
-    """
-    RAG-powered chat: retrieves relevant context from vector store and answers questions.
-    Also handles general conversation when no relevant context is found.
-    """
+@router.post("/chat", dependencies=[Depends(limit_chat)])
+async def chat_with_document(req: ChatRequest, current_user: dict = Depends(get_current_user)):
     question = (req.question or "").strip()
     history = req.history or []
+    user_id = current_user['uid']
 
     if not question:
         raise HTTPException(status_code=400, detail="question is required")
 
     try:
-        # Check if this is a general greeting/acknowledgment
-        general_responses = {
-            "ok": "Feel free to ask me anything about the content!",
-            "okay": "What else would you like to know?",
-            "thanks": "You're welcome! Ask me anything else.",
-            "thank you": "Happy to help! Any other questions?",
-            "got it": "Great! What else can I help you with?",
-            "alright": "Is there anything else you'd like to know?",
-            "sure": "Go ahead, I'm here to help!",
-            "yes": "What would you like to know?",
-            "no": "Okay! Let me know if you need anything."
-        }
-        
-        question_lower = question.lower()
-        
-        # Check for exact matches first
-        if question_lower in general_responses:
+        response = get_general_response(question)
+        if response:
             return {
-                "answer": general_responses[question_lower],
+                "answer": response,
                 "sources_used": 0
             }
         
-        # Use RAG to retrieve relevant context chunks
-        context_chunks = rag_service.retrieve_context(question, k=req.top_k)
+        store = PersistentVectorStore()
         
-        if not context_chunks:
-            # No relevant content found - inform user politely
+        results = await store.search_bm25(user_id, question, k=req.top_k, document_id=req.document_id)
+        
+        if not results:
             return {
                 "answer": "I don't have information about that in the loaded content. Please ask questions related to the document you extracted, or extract new content from the Home page.",
                 "sources_used": 0
             }
         
-        # Combine chunks into context
+        context_chunks = [r["content"] for r in results]
         context = "\n\n".join(context_chunks)
         
-        # Build conversation history for context
         history_text = ""
         if history:
-            recent_history = history[-4:]  # Last 4 exchanges
+            recent_history = history[-4:]
             for msg in recent_history:
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
                 history_text += f"{role}: {content}\n"
         
-        # Get AI answer with context
         answer = ask_question_about_text(question, context, history=history)
         
         return {

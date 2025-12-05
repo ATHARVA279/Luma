@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Link as LinkIcon, Sparkles, Trash2, Rocket, Target, Settings } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Link as LinkIcon, Sparkles, Trash2, Rocket, Target, Settings, RotateCcw, ArrowRight, FileText, Brain, MessageCircle } from "lucide-react";
 import { toast } from 'react-toastify';
 import { PulseLoader } from 'react-spinners';
 import api from "../api/backend";
-import Loader from "../components/Loader";
 import ConceptCard from "../components/ConceptCard";
+import PageLayout from "../components/layout/PageLayout";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import Card from "../components/ui/Card";
+import Badge from "../components/ui/Badge";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -15,17 +19,60 @@ export default function Home() {
   const [mlReady, setMlReady] = useState(false);
   const [initializingML, setInitializingML] = useState(false);
   const navigate = useNavigate();
+  const { id } = useParams();
 
   useEffect(() => {
+    if (id) {
+      const loadDocument = async () => {
+        try {
+          setLoading(true);
+          const docRes = await api.get(`/library/${id}`);
+          const doc = docRes.data;
+
+          const info = {
+            url: doc.url,
+            textLength: doc.text_content?.length || 0,
+            chunksIndexed: doc.metadata?.total_chunks || 0
+          };
+
+          setExtractedInfo(info);
+          setConcepts(doc.concepts || []);
+          setUrl(doc.url);
+
+          localStorage.setItem("extractedConcepts", JSON.stringify(doc.concepts || []));
+          localStorage.setItem("extractedInfo", JSON.stringify(info));
+          localStorage.setItem("extractedUrl", doc.url);
+          localStorage.setItem("extractedDocumentId", id);
+
+          setLoading(false);
+        } catch (e) {
+          console.error("Failed to load document", e);
+          toast.error("Failed to load document");
+          setLoading(false);
+          navigate('/');
+        }
+      };
+      loadDocument();
+      return;
+    }
+
     const savedConcepts = localStorage.getItem("extractedConcepts");
     const savedInfo = localStorage.getItem("extractedInfo");
     const savedUrl = localStorage.getItem("extractedUrl");
-    
+
     if (savedConcepts) {
-      setConcepts(JSON.parse(savedConcepts));
+      try {
+        setConcepts(JSON.parse(savedConcepts));
+      } catch (e) {
+        localStorage.removeItem("extractedConcepts");
+      }
     }
     if (savedInfo) {
-      setExtractedInfo(JSON.parse(savedInfo));
+      try {
+        setExtractedInfo(JSON.parse(savedInfo));
+      } catch (e) {
+        localStorage.removeItem("extractedInfo");
+      }
     }
     if (savedUrl) {
       setUrl(savedUrl);
@@ -37,13 +84,24 @@ export default function Home() {
         await api.get("/warmup");
         setMlReady(true);
       } catch (err) {
-        console.log("ML warmup skipped, will initialize on first use");
         setMlReady(true);
       } finally {
         setInitializingML(false);
       }
     };
     initializeML();
+  }, [id, navigate]);
+
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState("");
+  const pollTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+      }
+    };
   }, []);
 
   const handleExtract = async () => {
@@ -51,34 +109,96 @@ export default function Home() {
       toast.error("Please enter a valid URL");
       return;
     }
-    
+
     setLoading(true);
+    setProgress(0);
+    setStatus("Starting extraction...");
     setConcepts([]);
     setExtractedInfo(null);
-    
+
     try {
-      toast.info("Extracting content...");
-      const res = await api.post("/extract", { url });
-      const info = {
-        url: res.data.url,
-        textLength: res.data.full_length,
-        chunksIndexed: res.data.chunks_indexed
+      const { data } = await api.post("/extract", { url });
+
+      if (data.status === "already_extracted") {
+        setLoading(false);
+        toast.success(data.message || "URL already extracted!");
+
+        try {
+          const docRes = await api.get(`/library/${data.document_id}`);
+          const doc = docRes.data;
+
+          const info = {
+            url: doc.url,
+            textLength: doc.text_content?.length || 0,
+            chunksIndexed: doc.metadata?.total_chunks || 0
+          };
+
+          setExtractedInfo(info);
+          setConcepts(doc.concepts || []);
+
+          localStorage.setItem("extractedConcepts", JSON.stringify(doc.concepts || []));
+          localStorage.setItem("extractedInfo", JSON.stringify(info));
+          localStorage.setItem("extractedUrl", url);
+          localStorage.setItem("extractedDocumentId", data.document_id);
+
+        } catch (e) {
+          toast.error("Failed to load document details");
+        }
+        return;
+      }
+
+      const { job_id } = data;
+
+      const pollStatus = async () => {
+        try {
+          const job = await api.get(`/extract/status/${job_id}`);
+          const { status, progress, result, error } = job.data;
+
+          setProgress(progress);
+          setStatus(status === "processing" ? `Extracting... ${progress}%` : status);
+
+          if (status === "completed") {
+            setLoading(false);
+
+            try {
+              const docRes = await api.get(`/library/${result.document_id}`);
+              const doc = docRes.data;
+
+              const info = {
+                url: doc.url,
+                textLength: doc.text_content?.length || 0,
+                chunksIndexed: 0
+              };
+
+              setExtractedInfo(info);
+              setConcepts(doc.concepts || []);
+
+              localStorage.setItem("extractedConcepts", JSON.stringify(doc.concepts || []));
+              localStorage.setItem("extractedInfo", JSON.stringify(info));
+              localStorage.setItem("extractedUrl", url);
+              localStorage.setItem("extractedDocumentId", result.document_id);
+
+              toast.success(`Successfully extracted content!`);
+            } catch (e) {
+              toast.success("Extraction complete!");
+            }
+
+          } else if (status === "failed") {
+            setLoading(false);
+            toast.error(`Extraction failed: ${error}`);
+          } else {
+            pollTimeoutRef.current = setTimeout(pollStatus, 3000);
+          }
+        } catch (err) {
+          pollTimeoutRef.current = setTimeout(pollStatus, 3000);
+        }
       };
-      const extractedConcepts = res.data.concepts || [];
-      
-      setExtractedInfo(info);
-      setConcepts(extractedConcepts);
-      
-      localStorage.setItem("extractedConcepts", JSON.stringify(extractedConcepts));
-      localStorage.setItem("extractedInfo", JSON.stringify(info));
-      localStorage.setItem("extractedUrl", url);
-      
-      toast.success(`Successfully extracted ${extractedConcepts.length} concepts!`);
+
+      pollStatus();
+
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to extract content. Please check the URL and try again.");
-    } finally {
       setLoading(false);
+      toast.error("Failed to start extraction.");
     }
   };
 
@@ -87,170 +207,132 @@ export default function Home() {
     navigate("/notes", { state: { topic: topicName } });
   };
 
-  const handleGenerateNotes = (concept) => {
-    const topicName = typeof concept === 'string' ? concept : concept.title || concept.name || concept;
-    navigate("/notes", { state: { topic: topicName } });
-  };
-
   const handleClearData = async () => {
     const confirmClear = () => {
-      toast.info(
-        <div>
-          <p className="font-semibold mb-3">Clear all extracted content?</p>
-          <div className="flex gap-2">
-            <button
-              onClick={async () => {
-                toast.dismiss();
-                try {
-                  await api.delete("/clear-store");
-                  
-                  localStorage.removeItem("extractedConcepts");
-                  localStorage.removeItem("extractedInfo");
-                  localStorage.removeItem("extractedUrl");
-                  setConcepts([]);
-                  setExtractedInfo(null);
-                  setUrl("");
-                  
-                  toast.success("All content cleared successfully!");
-                } catch (err) {
-                  console.error("Clear error:", err);
-                  toast.warning("Failed to clear backend stores, but frontend data was cleared.");
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Yes, Clear
-            </button>
-            <button
-              onClick={() => toast.dismiss()}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>,
-        {
-          position: "top-center",
-          autoClose: false,
-          closeOnClick: false,
-          draggable: false,
-          closeButton: false,
-        }
-      );
+      if (window.confirm("Start a new extraction? This will clear current view.")) {
+        localStorage.removeItem("extractedConcepts");
+        localStorage.removeItem("extractedInfo");
+        localStorage.removeItem("extractedUrl");
+        localStorage.removeItem("extractedDocumentId");
+        setConcepts([]);
+        setExtractedInfo(null);
+        setUrl("");
+        toast.success("Ready for new extraction!");
+      }
     };
     confirmClear();
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto">
+    <PageLayout>
+      <div className="max-w-4xl mx-auto">
         {/* Hero Section */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-8 mb-6">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-600 to-red-600 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" strokeWidth={2} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">
-                AI Learning Navigator
-              </h1>
-              <p className="text-sm text-slate-400 mt-1">
-                Transform web content into interactive learning experiences
-              </p>
-            </div>
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center p-2 bg-zinc-900 rounded-full mb-6 border border-zinc-800">
+            <Sparkles className="w-4 h-4 text-violet-400 mr-2" />
+            <span className="text-xs font-medium text-zinc-400">AI-Powered Learning</span>
           </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-zinc-100 mb-4 tracking-tight">
+            Transform content into <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">knowledge</span>
+          </h1>
+          <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+            Enter any URL to generate study notes, quizzes, and interactive chat sessions instantly.
+          </p>
         </div>
 
         {initializingML && (
-          <div className="bg-slate-900/50 border border-orange-500/30 rounded-xl p-4 mb-6">
-            <p className="text-orange-300 text-sm flex items-center gap-2">
+          <Card className="mb-8 border-violet-500/20 bg-violet-500/5">
+            <div className="flex items-center gap-3 text-violet-300 text-sm">
               <Settings className="w-4 h-4 animate-spin" />
               Initializing AI models (first time only)...
-            </p>
-          </div>
+            </div>
+          </Card>
         )}
 
         {/* Extract Section */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
-              <LinkIcon className="w-5 h-5 text-orange-400" strokeWidth={2} />
+        <Card className="mb-12 p-8 border-zinc-800 shadow-2xl shadow-black/50">
+          <div className="flex flex-col gap-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <LinkIcon className="h-5 w-5 text-zinc-500" />
+              </div>
+              <Input
+                type="text"
+                placeholder="https://example.com/article"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleExtract()}
+                className="pl-11 py-4 text-lg bg-zinc-950 border-zinc-800 focus:border-violet-500"
+              />
             </div>
-            <h2 className="text-xl font-semibold text-white">Extract Content</h2>
-          </div>
-          <p className="text-slate-400 text-sm mb-4">
-            Enter any article, documentation, or educational content URL to begin learning
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              placeholder="https://example.com/article"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleExtract()}
-              className="flex-1 bg-slate-900 text-white border border-slate-700 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder-slate-500 transition-all"
-            />
-            <button
-              onClick={handleExtract}
-              disabled={loading}
-              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-medium px-6 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <PulseLoader color="#ffffff" size={8} />
-                  Extracting...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" strokeWidth={2} />
-                  Extract & Learn
-                </span>
-              )}
-            </button>
-            {(concepts.length > 0 || extractedInfo) && (
-              <button
-                onClick={handleClearData}
-                disabled={loading}
-                className="px-4 py-3 rounded-lg font-medium bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 hover:text-red-300 disabled:opacity-50 transition-all flex items-center gap-2"
-                title="Clear all data and start fresh"
-              >
-                <Trash2 className="w-5 h-5" strokeWidth={2} />
-                <span className="hidden sm:inline">Clear</span>
-              </button>
-            )}
-          </div>
-        </div>
 
-        {loading && (
-          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-12 mb-6 text-center">
-            <Loader />
-            <p className="text-slate-400 mt-4 text-sm">
-              Analyzing content with AI... This may take a moment
-            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="gradient"
+                size="lg"
+                onClick={handleExtract}
+                disabled={loading}
+                className="flex-1 text-base"
+              >
+                {loading ? (
+                  <>
+                    <PulseLoader color="#ffffff" size={8} className="mr-2" />
+                    Extracting...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Extract & Learn
+                  </>
+                )}
+              </Button>
+
+              {(concepts.length > 0 || extractedInfo) && (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={handleClearData}
+                  disabled={loading}
+                >
+                  <RotateCcw className="w-5 h-5 mr-2" />
+                  New
+                </Button>
+              )}
+            </div>
           </div>
-        )}
+
+          {loading && (
+            <div className="mt-8">
+              <div className="flex justify-between text-sm text-zinc-400 mb-2">
+                <span>{status}</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-violet-500 h-full transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </Card>
 
         {concepts.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
-                  <Target className="w-5 h-5 text-orange-400" strokeWidth={2} />
-                </div>
-                <h3 className="text-xl font-semibold text-white">
-                  Key Concepts
-                </h3>
-              </div>
-              <div className="text-sm text-slate-400 hidden sm:block">
-                Click to generate notes
-              </div>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
+                <Target className="w-5 h-5 text-violet-400" />
+                Key Concepts
+              </h3>
+              <Badge variant="default">{concepts.length} Found</Badge>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {concepts.map((concept, i) => (
-                <div 
+                <div
                   key={i}
                   onClick={() => handleConceptClick(concept)}
+                  className="cursor-pointer group"
                 >
                   <ConceptCard concept={concept} />
                 </div>
@@ -260,17 +342,23 @@ export default function Home() {
         )}
 
         {!concepts.length && !loading && !extractedInfo && (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-lg bg-orange-600/20 flex items-center justify-center border border-orange-500/30">
-              <Rocket className="w-8 h-8 text-orange-400" strokeWidth={2} />
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">Ready to Start Learning?</h3>
-            <p className="text-slate-400 text-sm max-w-md mx-auto">
-              Enter a URL above to extract content and unlock all AI-powered learning features
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+            {[
+              { icon: FileText, title: "Smart Notes", desc: "Auto-generated summaries and key points" },
+              { icon: Brain, title: "AI Quiz", desc: "Test your knowledge with generated questions" },
+              { icon: MessageCircle, title: "Chat Assistant", desc: "Ask questions directly to your content" }
+            ].map((feature, i) => (
+              <div key={i} className="p-6 rounded-2xl bg-zinc-900/30 border border-zinc-800/50">
+                <div className="w-12 h-12 mx-auto bg-zinc-900 rounded-xl flex items-center justify-center mb-4 border border-zinc-800">
+                  <feature.icon className="w-6 h-6 text-zinc-400" />
+                </div>
+                <h3 className="font-semibold text-zinc-200 mb-2">{feature.title}</h3>
+                <p className="text-sm text-zinc-500">{feature.desc}</p>
+              </div>
+            ))}
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   );
 }

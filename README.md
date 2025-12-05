@@ -146,41 +146,6 @@ Frontend will be available at: `http://localhost:5173`
 
 ---
 
-## 🧠 Interview Talking Points
-
-### What is RAG?
-> "Retrieval-Augmented Generation combines document retrieval with LLM generation. Instead of relying on the model's training data, we retrieve relevant context from a knowledge base and pass it to the LLM for grounded, factual responses."
-
-### How does your RAG pipeline work?
-> "I scrape and clean web content, chunk it into semantic units, vectorize using TF-IDF, and store in a JSON-based vector store. At query time, I compute cosine similarity to retrieve top-k chunks, then pass them as context to Gemini for answer generation."
-
-### What's the difference between TF-IDF and BM25?
-> "Both are lexical search methods. TF-IDF uses term frequency and inverse document frequency for scoring. BM25 improves on this with term frequency saturation and document length normalization - it's more robust for varying document lengths."
-
-### What is Reciprocal Rank Fusion (RRF)?
-> "RRF merges ranked lists from multiple retrieval methods. Instead of blending scores (which have different scales), it uses rank positions: score = sum(1/(k + rank)). This makes it robust when combining TF-IDF and BM25 results."
-
-### How does conversational memory work?
-> "I use LangChain's ConversationBufferMemory to track recent exchanges per session. This lets the system understand context for follow-up questions like 'tell me more' or 'what about X' without re-explaining the conversation history."
-
-### Why chunk documents?
-> "LLMs have token limits (~8k-32k). Smaller chunks give more precise retrieval and fit within context windows. I chunk on sentence/paragraph boundaries to maintain semantic coherence."
-
-### How would you improve this?
-> "Use embeddings (sentence-transformers) for semantic search, add FAISS for fast vector ops, implement caching to reduce API calls, add evaluation metrics (ROUGE, BLEU), and create a feedback loop to improve retrieval quality."
-
----
-
-## 📝 Resume Bullets (Pick 2-3)
-
-✅ Built **Luma**, an AI learning platform (FastAPI + React) demonstrating RAG pipelines with hybrid search (TF-IDF + BM25 + RRF), conversational memory, and LLM integration for study notes and quiz generation
-
-✅ Implemented **end-to-end RAG system** with web scraping, text chunking, vector indexing (scikit-learn), multiple retrieval strategies, and Gemini API integration with proper error handling and retry logic
-
-✅ Designed **full-stack application** with responsive React UI, FastAPI backend, session-based chat memory (LangChain), and AI-powered content generation using prompt engineering
-
----
-
 ## 📁 Project Structure (Simplified)
 
 ```
@@ -238,61 +203,6 @@ Study AI/
 │
 ├── .gitignore                          # Git ignore rules (includes .env)
 └── README.md                           # This file
-## 📁 Project Structure (Simplified)
-
-```
-Luma/
-├── Backend/
-│   ├── app.py                      # FastAPI application (main entry)
-│   ├── requirements.txt            # Python dependencies
-│   ├── .env.example               # Environment variable template
-│   │
-│   ├── Routes/                    # API endpoints
-│   │   ├── extract.py            # Content extraction & indexing
-│   │   ├── chat.py               # Basic RAG chat
-│   │   ├── advanced_chat.py      # Hybrid search + memory
-│   │   ├── notes.py              # Study notes generation
-│   │   ├── quiz.py               # Quiz generation
-│   │   └── warmup.py             # System initialization
-│   │
-│   ├── Services/                  # Core business logic
-│   │   ├── gemini_client.py      # LLM API integration
-│   │   ├── text_cleaner.py       # Web scraping & preprocessing
-│   │   ├── simple_rag_service.py # TF-IDF retrieval
-│   │   ├── advanced_rag_service.py # BM25 + Hybrid + RRF
-│   │   ├── conversational_memory.py # Session-based memory
-│   │   └── note_generator.py     # Study materials generation
-│   │
-│   └── vectorstore/               # JSON-based vector stores
-│       ├── simple_store.json     # TF-IDF vectors
-│       └── advanced_store.json   # BM25 + metadata
-│
-├── Frontend/
-│   ├── package.json              # Node dependencies
-│   ├── tailwind.config.js        # Tailwind configuration
-│   │
-│   └── src/
-│       ├── App.jsx               # Main app with routing
-│       ├── index.jsx             # React entry point
-│       │
-│       ├── api/
-│       │   └── backend.js        # Axios API client
-│       │
-│       ├── components/
-│       │   ├── Navbar.jsx        # Navigation
-│       │   ├── ChatSection.jsx   # Chat interface
-│       │   ├── QuizSection.jsx   # Quiz UI
-│       │   └── Loader.jsx        # Loading states
-│       │
-│       └── pages/
-│           ├── Home.jsx          # URL extraction page
-│           ├── Notes.jsx         # Notes generation page
-│           ├── Chat.jsx          # Chat interface page
-│           └── Quiz.jsx          # Quiz page
-│
-└── README.md                      # This file
-```
-
 ---
 
 ## 🎓 Key Concepts Demonstrated
@@ -345,32 +255,6 @@ Different prompts for different tasks:
 **Frontend can't reach backend**
 - Check backend is running on `http://127.0.0.1:8000`
 - Check `Frontend/src/api/backend.js` baseURL setting
-
----
-
-## 🎯 What Makes This Portfolio-Ready?
-
-✅ **Explainable**: Every component has a clear purpose  
-✅ **Production-Ready**: Proper error handling, retry logic, API key management  
-✅ **Interview-Friendly**: Shows RAG, LLMs, full-stack skills  
-✅ **Best Practices**: Session management, CORS, environment variables  
-✅ **Clean Code**: Modular architecture, clear separation of concerns  
-✅ **Modern Stack**: FastAPI, React, Tailwind - industry standard  
-
----
-
-## 🚀 Next Steps / Improvements
-
-When discussing in interviews, mention these potential enhancements:
-
-1. **Better Retrieval**: Replace TF-IDF with embeddings (sentence-transformers)
-2. **Vector DB**: Use FAISS, Pinecone, or Weaviate instead of JSON
-3. **Caching**: Add Redis for LLM response caching
-4. **Evaluation**: Implement ROUGE/BLEU metrics for quality
-5. **Testing**: Add pytest for backend, Jest for frontend
-6. **Deployment**: Dockerize and deploy to AWS/GCP/Azure
-7. **Authentication**: Add user accounts and personal vector stores
-8. **Feedback Loop**: Let users rate answers to improve retrieval
 
 ---
 

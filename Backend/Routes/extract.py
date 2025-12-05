@@ -1,129 +1,213 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from Services.text_cleaner import extract_text_from_url
-from Services import simple_rag_service as simple_rag
-from Services import advanced_rag_service as advanced_rag
-from Services.gemini_client import extract_concepts_from_text
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
+from pydantic import BaseModel, HttpUrl
+from typing import List, Optional
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+from Services.gemini_client import extract_concepts_from_text
+from Middleware.auth import get_current_user
+from config import Config
+from models.requests import ExtractRequest
+from Services.job_service import JobService
+from Services.chunking_service import TextChunker
+from Database.database import get_db
+from datetime import datetime
+from bson import ObjectId
+import httpx
+from bs4 import BeautifulSoup
+import re
+import warnings
+from bs4 import MarkupResemblesLocatorWarning
+
+warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
+from Middleware.rate_limit import limit_extract
 
 router = APIRouter()
 
-# Import the shared storage for backward compatibility
-import Routes.quiz as quiz_module
-import Routes.chat as chat_module
-
-class ExtractRequest(BaseModel):
-    url: str
-    use_advanced_rag: bool = True
-
-@router.delete("/clear-store")
-async def clear_vector_store():
-    """
-    Clear all content from vector stores (both simple and advanced RAG).
-    """
+async def process_extraction_job(job_id: str, url: str, user_id: str):
     try:
-        simple_rag.clear_store()
-        advanced_rag.clear_store()
-        quiz_module._stored_text = ""
-        chat_module._stored_text = ""
-        return {"message": "All vector stores cleared successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to clear stores: {str(e)}")
-
-@router.post("/extract")
-async def extract_from_url(req: ExtractRequest):
-    """
-    Extract cleaned textual content from a web URL and index it into vector store.
-    Uses both simple and advanced RAG for maximum compatibility.
-    """
-    url = req.url.strip()
-    if not url:
-        raise HTTPException(status_code=400, detail="url is required")
-
-    try:
-        # Extract text from URL
-        text = extract_text_from_url(url)
+        JobService.update_job(job_id, status="processing", progress=10)
+        
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=Config.HTTP_TIMEOUT) as client:
+                headers = {
+                    'User-Agent': Config.USER_AGENT,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                }
+                response = await client.get(url, headers=headers)
+                html = response.text
+        except Exception as e:
+            raise Exception(f"Failed to fetch URL: {str(e)}")
+            
+        JobService.update_job(job_id, progress=30)
+        
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        for script in soup(["script", "style"]):
+            script.decompose()
+            
+        text = soup.get_text()
+        
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text = '\n'.join(chunk for chunk in chunks if chunk)
+        
         if not text.strip():
-            raise HTTPException(status_code=422, detail="No text found at the provided URL")
+            raise Exception("No text found at the provided URL")
         
-        # Clear existing stores first to avoid mixing content
-        try:
-            simple_rag.clear_store()
-            advanced_rag.clear_store()
-        except Exception as e:
-            print(f"⚠️ Store clearing warning: {str(e)}")
+        JobService.update_job(job_id, progress=40)
         
-        # Store text for backward compatibility
-        quiz_module._stored_text = text
-        chat_module._stored_text = text
+        chunker = TextChunker(chunk_size=Config.DEFAULT_CHUNK_SIZE, overlap=Config.DEFAULT_CHUNK_OVERLAP)
+        chunks_data = chunker.chunk_by_sentences(text)
+        chunk_texts = [c["text"] for c in chunks_data]
         
-        # Index into BOTH simple and advanced RAG stores
-        simple_chunks = 0
-        advanced_chunks = 0
+        JobService.update_job(job_id, progress=60)
         
-        try:
-            # Index into simple RAG (for compatibility)
-            simple_chunks = simple_rag.add_text_to_store(text, url)
-        except Exception as e:
-            print(f"⚠️ Simple RAG indexing error: {str(e)}")
-        
-        try:
-            # Index into advanced RAG with metadata
-            metadata = {"url": url, "indexed_at": str(asyncio.get_event_loop().time())}
-            advanced_chunks = advanced_rag.add_text_to_store(text, url, metadata)
-        except Exception as e:
-            print(f"⚠️ Advanced RAG indexing error: {str(e)}")
-        
-        chunks_indexed = max(simple_chunks, advanced_chunks)
-        
-        # Try to extract concepts (optional - don't fail if this doesn't work)
         concepts_list = []
         try:
-            # Use a truncated version of text for faster concept extraction
-            concept_text = text[:5000] if len(text) > 5000 else text
-            concepts_data = extract_concepts_from_text(concept_text)
-            concepts_list = concepts_data.get("concepts", []) if concepts_data else []
+            extraction_result = await asyncio.to_thread(extract_concepts_from_text, text)
+            concepts_list = extraction_result.get("concepts", [])
+            
+            if not concepts_list:
+                 concepts_list = ["General Content"]
+                 
         except Exception as e:
-            print(f"⚠️ Concept extraction error (continuing anyway): {str(e)}")
-            # Use simple fallback - extract common nouns/phrases as concepts
-            import re
-            # Extract capitalized words and common technical terms
-            words = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', text[:2000])
-            # Get unique words and limit to 10
-            unique_words = list(dict.fromkeys(words))[:10]
-            concepts_list = unique_words if unique_words else ["Content Overview", "Key Topics", "Main Concepts"]
-        
-        return {
-            "url": url,
-            "text": text[:500] + "..." if len(text) > 500 else text,
-            "full_length": len(text),
-            "chunks_indexed": chunks_indexed,
-            "concepts": concepts_list,
-            "relationships": [],
-            "rag_methods": {
-                "simple": simple_chunks > 0,
-                "advanced": advanced_chunks > 0
-            }
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Fatal error in extract: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
-    """
-    Extract cleaned textual content from a web URL.
-    """
-    url = req.url.strip()
-    if not url:
-        raise HTTPException(status_code=400, detail="url is required")
+            print(f"Concept extraction error: {e}")
+            concepts_list = ["General Content"]
 
-    try:
-        text = extract_text_from_url(url)
-        if not text.strip():
-            raise HTTPException(status_code=422, detail="No text found at the provided URL")
-        # For safety, slice very long text on the response side if needed (frontend can request chunks)
-        return {"url": url, "text": text}
+        JobService.update_job(job_id, progress=70)
+        
+        db = await get_db()
+        
+        concepts_structured = []
+        if concepts_list:
+            for concept in concepts_list:
+                concepts_structured.append({
+                    "name": concept,
+                    "extracted_at": datetime.utcnow()
+                })
+        
+        relationships = extraction_result.get("relationships", [])
+        
+        document = {
+            "user_id": user_id,
+            "url": url,
+            "title": concepts_list[0] if concepts_list else "Untitled Document",
+            "status": "completed",
+            "concepts": concepts_structured,
+            "relationships": relationships,
+            "metadata": {
+                "total_chunks": len(chunks_data),
+                "total_concepts": len(concepts_list),
+                "text_length": len(text),
+                "extraction_method": "gemini-2.5-flash"
+            },
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        result = await db.documents.insert_one(document)
+        doc_id = str(result.inserted_id)
+        
+        chunk_docs = []
+        for c in chunks_data:
+            chunk_docs.append({
+                "document_id": result.inserted_id,
+                "user_id": user_id,
+                "chunk_index": c["chunk_index"],
+                "text": c["text"],
+                "metadata": {
+                    "start_sentence": c["start_sentence"],
+                    "end_sentence": c["end_sentence"],
+                    "type": "sentence_group"
+                },
+                "created_at": datetime.utcnow().isoformat()
+            })
+            
+        if chunk_docs:
+            insert_result = await db.document_chunks.insert_many(chunk_docs)
+            chunk_oids = insert_result.inserted_ids
+            
+            try:
+                await db.document_chunks.create_index([("document_id", 1), ("chunk_index", 1)])
+            except:
+                pass
+        
+        JobService.update_job(job_id, progress=80)
+
+        from Services.persistent_vector_store import PersistentVectorStore
+        
+        store = PersistentVectorStore()
+        for i, chunk_doc in enumerate(chunk_docs):
+            tokens = chunk_doc["text"].lower().split()
+            await store.save_bm25_tokens(user_id, doc_id, chunk_oids[i], tokens)
+            
+        chunks_indexed = len(chunk_docs)
+        await db.documents.update_one(
+            {"_id": result.inserted_id},
+            {"$set": {"summary": f"Extracted {chunks_indexed} chunks. Key topics: {', '.join(concepts_list[:3])}..."}}
+        )
+
+        from Services.activity_service import ActivityService
+        await ActivityService.log_activity(user_id, "extract", document["title"], f"Extracted {len(chunks_data)} chunks")
+
+        JobService.update_job(job_id, status="completed", progress=100, result={"document_id": doc_id})
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Job failed: {str(e)}")
+        print(f"DEBUG: Full traceback:\n{error_trace}")
+    
+        from Services.credit_service import CreditService
+        await CreditService.refund_credits(user_id, "extract")
+        
+        JobService.update_job(job_id, status="failed", error=f"{str(e)}. Check server logs for details.")
+
+@router.post("/extract", dependencies=[Depends(limit_extract)])
+async def extract_url(extract_req: ExtractRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    db = await get_db()
+    existing_doc = await db.documents.find_one({
+        "user_id": current_user['uid'],
+        "url": str(extract_req.url)
+    })
+    
+    if existing_doc:
+        return {
+            "status": "already_extracted",
+            "document_id": str(existing_doc['_id']),
+            "message": "This URL has already been extracted",
+            "extracted_at": existing_doc.get('created_at'),
+            "concepts_count": len(existing_doc.get('concepts', []))
+        }
+    
+    from Services.credit_service import CreditService
+    await CreditService.check_and_deduct(current_user['uid'], "extract")
+
+    job_id = JobService.create_job("extraction", current_user['uid'], {"url": str(extract_req.url)})
+    
+    background_tasks.add_task(process_extraction_job, job_id, str(extract_req.url), current_user['uid'])
+    
+    return {"job_id": job_id, "status": "pending"}
+
+@router.get("/extract/status/{job_id}")
+async def get_job_status(job_id: str, current_user: dict = Depends(get_current_user)):
+    job = JobService.get_job(job_id, current_user['uid'])
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+@router.get("/extract/jobs")
+async def list_jobs(current_user: dict = Depends(get_current_user)):
+    return JobService.list_user_jobs(current_user['uid'], "extraction")
+
+@router.delete("/clear-store")
+async def clear_database(current_user: dict = Depends(get_current_user)):
+    try:
+        db = await get_db()
+        await db.documents.delete_many({"user_id": current_user['uid']})
+        await db.document_chunks.delete_many({"user_id": current_user['uid']})
+        
+        return {"message": "Database and vector stores cleared"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
+

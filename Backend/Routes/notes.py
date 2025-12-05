@@ -1,8 +1,4 @@
-# Backend/Routes/notes.py
-"""
-Automated Note Generation routes
-"""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 from typing import Optional
 from Services.note_generator import (
@@ -10,68 +6,120 @@ from Services.note_generator import (
     generate_quick_summary,
     extract_key_concepts
 )
-from Services import advanced_rag_service as advanced_rag
-from Services import simple_rag_service as simple_rag
+from Services.persistent_vector_store import PersistentVectorStore
+from Middleware.rate_limit import limit_notes
 
 router = APIRouter()
 
-class NotesRequest(BaseModel):
-    topic: str
-    content: Optional[str] = None
-    use_stored_content: bool = True
+from models.requests import GenerateNotesRequest as NotesRequest, SummaryRequest
 
-class SummaryRequest(BaseModel):
-    content: str
-    max_sentences: Optional[int] = 3
+from Middleware.auth import get_current_user
+from Database.database import get_db
+from fastapi import Depends
+from datetime import datetime
+from bson import ObjectId
 
-@router.post("/notes/generate")
-def generate_notes(req: NotesRequest):
-    """
-    Generate comprehensive study notes from content
-    Includes: summary, key points, definitions, flashcards, mind map
-    """
-    
+@router.post("/notes/generate", dependencies=[Depends(limit_notes)])
+async def generate_notes(req: NotesRequest, current_user: dict = Depends(get_current_user)):
     try:
-        # Get content from stored RAG or provided content
-        if req.use_stored_content and not req.content:
-            # Try advanced RAG first (hybrid search)
-            results = advanced_rag.hybrid_search(req.topic, k=10)
-            
-            # Fallback to simple RAG if advanced returns nothing
-            if not results:
-                context_chunks = simple_rag.retrieve_context(req.topic, k=10)
-                if context_chunks:
-                    content = "\n\n".join(context_chunks)
-                else:
+        db = await get_db()
+        
+        if not req.document_id:
+            raise HTTPException(
+                status_code=400,
+                detail="document_id is required for note generation"
+            )
+        
+        try:
+            doc_oid = ObjectId(req.document_id)
+        except:
+            raise HTTPException(status_code=400, detail="Invalid document_id format")
+        
+        existing_note = await db.concept_notes.find_one({
+            "user_id": current_user['uid'],
+            "document_id": doc_oid,
+            "concept_name": req.topic
+        })
+        
+        if existing_note:
+            return {
+                "success": True,
+                "topic": req.topic,
+                "document_id": req.document_id,
+                "notes": existing_note['content'],
+                "source": "cache",
+                "generated_at": existing_note.get('generated_at')
+            }
+
+        from Services.credit_service import CreditService
+        await CreditService.check_and_deduct(current_user['uid'], "notes")
+
+        try:
+            if req.use_stored_content and not req.content:
+                store = PersistentVectorStore()
+                results = await store.search_bm25(
+                    current_user['uid'], 
+                    req.topic, 
+                    k=10, 
+                    document_id=req.document_id
+                )
+                
+                if not results:
                     raise HTTPException(
                         status_code=400,
-                        detail="No content found. Please extract content first or provide content directly."
+                        detail="No content found for this topic in the specified document."
                     )
+                
+                content = "\\n\\n".join([r["content"] for r in results])
+            elif req.content:
+                content = req.content
             else:
-                content = "\n\n".join([r["content"] for r in results])
-        elif req.content:
-            content = req.content
-        else:
-            raise HTTPException(status_code=400, detail="No content available")
-        
-        # Generate comprehensive notes
-        notes = generate_study_notes(content, req.topic)
-        
-        return {
-            "success": True,
-            "topic": req.topic,
-            "notes": notes
-        }
-    
+                raise HTTPException(status_code=400, detail="No content available")
+            
+            notes = generate_study_notes(content, req.topic)
+            
+            document = await db.documents.find_one({"_id": doc_oid})
+            concept_id = None
+            if document and "concepts" in document:
+                for concept in document['concepts']:
+                    if concept.get('name', '').lower() == req.topic.lower():
+                        concept_id = concept.get('_id')
+                        break
+            
+            new_note = {
+                "user_id": current_user['uid'],
+                "document_id": doc_oid,
+                "concept_name": req.topic,
+                "concept_id": concept_id,
+                
+                "content": notes,
+                "type": "comprehensive_notes",
+                
+                "generated_at": datetime.utcnow(),
+                "generation_method": "gemini-2.5-flash"
+            }
+            await db.concept_notes.insert_one(new_note)
+            
+            from Services.activity_service import ActivityService
+            await ActivityService.log_activity(current_user['uid'], "note", req.topic, "Generated study notes")
+
+            return {
+                "success": True,
+                "topic": req.topic,
+                "document_id": req.document_id,
+                "notes": notes,
+                "source": "generated"
+            }
+        except Exception as e:
+            await CreditService.refund_credits(current_user['uid'], "notes")
+            raise HTTPException(status_code=500, detail=f"Note generation failed: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Note generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
-@router.post("/notes/summary")
+@router.post("/notes/summary", dependencies=[Depends(limit_notes)])
 def create_summary(req: SummaryRequest):
-    """Generate quick summary of content"""
-    
     if not req.content or len(req.content.strip()) < 50:
         raise HTTPException(status_code=400, detail="Content too short for summarization")
     
@@ -88,7 +136,7 @@ def create_summary(req: SummaryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Summarization failed: {str(e)}")
 
-@router.post("/notes/concepts")
+@router.post("/notes/concepts", dependencies=[Depends(limit_notes)])
 def get_key_concepts(content: str, top_n: int = 10):
     """Extract key concepts from content"""
     
@@ -107,30 +155,40 @@ def get_key_concepts(content: str, top_n: int = 10):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Concept extraction failed: {str(e)}")
 
-@router.get("/notes/flashcards/{topic}")
-def get_flashcards_for_topic(topic: str, count: int = 10):
-    """Get flashcards for a specific topic from stored content"""
-    
+@router.get("/notes/flashcards/{topic}", dependencies=[Depends(limit_notes)])
+async def get_flashcards_for_topic(topic: str, count: int = 10, current_user: dict = Depends(get_current_user)):
     try:
-        # Get content about topic - try advanced RAG first
-        results = advanced_rag.hybrid_search(topic, k=8)
+        db = await get_db()
         
-        # Fallback to simple RAG
+        existing_note = await db.notes.find_one({
+            "user_id": current_user['uid'],
+            "topic": topic
+        })
+        
+        if existing_note and "content" in existing_note and "flashcards" in existing_note["content"]:
+            flashcards = existing_note["content"]["flashcards"]
+            return {
+                "topic": topic,
+                "flashcards": flashcards[:count],
+                "total_available": len(flashcards),
+                "source": "cache"
+            }
+
+        store = PersistentVectorStore()
+        results = await store.search_bm25(current_user['uid'], topic, k=8, document_id=None)
+        
         if not results:
-            context_chunks = simple_rag.retrieve_context(topic, k=8)
-            if not context_chunks:
-                raise HTTPException(status_code=404, detail=f"No content found for topic: {topic}")
-            content = "\n\n".join(context_chunks)
-        else:
-            content = "\n\n".join([r["content"] for r in results])
+            raise HTTPException(status_code=404, detail=f"No content found for topic: {topic}")
         
-        # Generate full notes (includes flashcards)
+        content = "\n\n".join([r["content"] for r in results])
+        
         notes = generate_study_notes(content, topic)
         
         return {
             "topic": topic,
             "flashcards": notes["flashcards"][:count],
-            "total_available": len(notes["flashcards"])
+            "total_available": len(notes["flashcards"]),
+            "source": "generated"
         }
     
     except HTTPException:
@@ -138,30 +196,39 @@ def get_flashcards_for_topic(topic: str, count: int = 10):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Flashcard generation failed: {str(e)}")
 
-@router.get("/notes/mind-map/{topic}")
-def get_mind_map(topic: str):
-    """Get mind map structure for a topic"""
-    
+@router.get("/notes/mind-map/{topic}", dependencies=[Depends(limit_notes)])
+async def get_mind_map(topic: str, current_user: dict = Depends(get_current_user)):
     try:
-        # Get content about topic - try advanced RAG first
-        results = advanced_rag.hybrid_search(topic, k=8)
+        db = await get_db()
         
-        # Fallback to simple RAG
+        existing_note = await db.notes.find_one({
+            "user_id": current_user['uid'],
+            "topic": topic
+        })
+        
+        if existing_note and "content" in existing_note and "mind_map" in existing_note["content"]:
+            return {
+                "topic": topic,
+                "mind_map": existing_note["content"]["mind_map"],
+                "key_points_count": len(existing_note["content"].get("key_points", [])),
+                "source": "cache"
+            }
+
+        store = PersistentVectorStore()
+        results = await store.search_bm25(current_user['uid'], topic, k=8, document_id=None)
+        
         if not results:
-            context_chunks = simple_rag.retrieve_context(topic, k=8)
-            if not context_chunks:
-                raise HTTPException(status_code=404, detail=f"No content found for topic: {topic}")
-            content = "\n\n".join(context_chunks)
-        else:
-            content = "\n\n".join([r["content"] for r in results])
+            raise HTTPException(status_code=404, detail=f"No content found for topic: {topic}")
         
-        # Generate notes (includes mind map)
+        content = "\n\n".join([r["content"] for r in results])
+        
         notes = generate_study_notes(content, topic)
         
         return {
             "topic": topic,
             "mind_map": notes["mind_map"],
-            "key_points_count": len(notes["key_points"])
+            "key_points_count": len(notes["key_points"]),
+            "source": "generated"
         }
     
     except HTTPException:

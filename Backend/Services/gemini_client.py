@@ -7,35 +7,24 @@ from google.api_core import exceptions as google_exceptions
 from dotenv import load_dotenv
 from typing import List
 
-load_dotenv()
+from config import Config
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise RuntimeError(
-        "GEMINI_API_KEY not found in environment. "
-        "Please set it in Backend/.env file. "
-        "Get your free API key at: https://ai.google.dev/"
-    )
+genai.configure(api_key=Config.GEMINI_API_KEY)
 
-genai.configure(api_key=GEMINI_API_KEY)
-
-# Choose a model; you can change according to availability
-MODEL = "gemini-2.5-flash"  # Stable model with wide availability
+MODEL = Config.GEMINI_MODEL
 
 def _extract_retry_delay(error_message: str) -> int:
-    """Extract retry delay from error message if available"""
     match = re.search(r'retry in (\d+)', error_message, re.IGNORECASE)
     if match:
         return int(match.group(1))
     match = re.search(r'retry_delay.*seconds:\s*(\d+)', error_message)
     if match:
         return int(match.group(1))
-    return 60  # Default to 60 seconds
+    return 60 
 
-def _call_gemini_with_retry(model, prompt: str, max_retries: int = 3) -> str:
-    """
-    Call Gemini API with exponential backoff retry logic for rate limits
-    """
+def _call_gemini_with_retry(model, prompt: str, max_retries: int = None) -> str:
+    if max_retries is None:
+        max_retries = Config.GEMINI_MAX_RETRIES
     for attempt in range(max_retries):
         try:
             response = model.generate_content(prompt)
@@ -43,37 +32,35 @@ def _call_gemini_with_retry(model, prompt: str, max_retries: int = 3) -> str:
         except Exception as e:
             error_str = str(e)
             
-            # Check if it's a rate limit error
             if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
                 if attempt < max_retries - 1:
-                    print(f"⏳ Rate limit hit. Retrying attempt {attempt + 1}/{max_retries}...")
+                    retry_delay = _extract_retry_delay(error_str)
+                    print(f"⏳ Rate limit hit. Retrying attempt {attempt + 1}/{max_retries} in {retry_delay}s...")
+                    time.sleep(retry_delay)
                     continue
                 else:
-                    # Last attempt failed, raise with user-friendly message
                     retry_delay = _extract_retry_delay(error_str)
                     raise Exception(
                         f"Gemini API rate limit exceeded. You've hit the daily quota (50 requests/day for free tier). "
                         f"Please wait {retry_delay} seconds or upgrade your API plan at https://ai.google.dev/pricing"
                     )
             else:
-                # Non-rate-limit error, raise immediately
                 raise e
     
     raise Exception("Failed to call Gemini API after retries")
 
-def _truncate_text(text: str, limit: int = 4000) -> str:
+def _truncate_text(text: str, limit: int = 50000) -> str:
     return text if len(text) <= limit else text[:limit]
 
 def extract_concepts_from_text(text: str) -> dict:
-    """
-    Sends a prompt to Gemini asking for concepts and relationships in JSON.
-    Returns parsed JSON dict.
-    """
-    truncated_text = _truncate_text(text, 3800)
+    truncated_text = _truncate_text(text, Config.MAX_TEXT_LENGTH_CONCEPTS)
     prompt = """
-You are an expert educational assistant. Extract key concepts from the text as SHORT KEYWORDS OR PHRASES (1-3 words each).
+You are an expert educational assistant. Analyze the ENTIRE text provided below to extract the most important key concepts.
 
-IMPORTANT: Each concept should be a concise keyword or short phrase, NOT a full sentence.
+IMPORTANT:
+1. Look for concepts across the WHOLE document, not just the beginning.
+2. Extract concepts as SHORT KEYWORDS OR PHRASES (1-3 words each).
+3. Do NOT use full sentences.
 
 Examples of GOOD concepts:
 - "Event Loop"
@@ -97,40 +84,29 @@ Do not include extra commentary. Use the document context for relationships.
 Text:
 """ + truncated_text
 
-    # Use the generative model interface with retry logic
     model = genai.GenerativeModel(MODEL)
     try:
         raw = _call_gemini_with_retry(model, prompt)
     except Exception as e:
         print(f"⚠️ Concept extraction error: {str(e)}")
-        # Return empty structure on rate limit
         return {"concepts": [], "relationships": [], "error": str(e)}
 
-    # Try to find JSON inside the response
     try:
-        # If the model returned text and includes markdown code fences, strip them
         cleaned = raw.strip()
-        # Find first "{" and last "}" for robustness
         start = cleaned.find("{")
         end = cleaned.rfind("}")
         if start != -1 and end != -1:
             cleaned = cleaned[start:end+1]
         data = json.loads(cleaned)
-        # Validate basic keys
         if not isinstance(data.get("concepts"), list) or not isinstance(data.get("relationships"), list):
             raise ValueError("Invalid JSON shape")
         return data
     except Exception as e:
-        # If parsing fails, return fallback minimal structure
         return {"error": "failed_to_parse_model_response", "raw": raw}
 
 def generate_mcq_from_text(text: str, count: int = 10, topics: List[str] = None) -> List[dict]:
-    """
-    Generate `count` MCQs from text using Gemini.
-    Returns list of {question, options: [..], answer: "A"/"B", explanation}
-    """
-    count = int(max(1, min(20, count)))
-    truncated_text = _truncate_text(text, 3800)
+    count = int(max(Config.MIN_QUIZ_QUESTIONS, min(Config.MAX_QUIZ_QUESTIONS, count)))
+    truncated_text = _truncate_text(text, Config.MAX_TEXT_LENGTH_QUIZ)
     
     topics_hint = ""
     if topics:
@@ -178,26 +154,36 @@ Text:
         raise Exception(f"Quiz generation failed: {str(e)}")
 
     try:
-        # extract JSON array from response
         cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            first_newline = cleaned.find("\n")
+            if first_newline != -1:
+                cleaned = cleaned[first_newline + 1:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3].strip()
+        
         start = cleaned.find("[")
         end = cleaned.rfind("]")
         if start != -1 and end != -1:
             cleaned = cleaned[start:end+1]
+        
         data = json.loads(cleaned)
         return data
+    except json.JSONDecodeError as e:
+        print(f"⚠️ JSON parsing error: {str(e)}")
+        print(f"⚠️ Problematic JSON (first 500 chars): {cleaned[:500]}")
+        return [{
+            "question": "Quiz generation incomplete - please try again",
+            "options": ["A) Try again", "B) Reduce question count", "C) Try different topics", "D) Check content length"],
+            "answer": "A",
+            "explanation": f"The AI response was malformed or incomplete. This can happen with very long content. Error: {str(e)[:100]}"
+        }]
     except Exception as e:
-        # If parsing fails, attempt to return an error-friendly structure
         return [{"question": "Parsing failed", "options": [], "answer": None, "explanation": raw}]
 
 def ask_question_about_text(question: str, text: str, history: List[dict] = None) -> str:
-    """
-    Basic Q&A that uses the document text as context.
-    history: optional list of {"role":"user"/"assistant", "content": "..."} to provide conversational context.
-    """
     history = history or []
-    ctx = _truncate_text(text, 3000)
-    # build a prompt that includes last few messages for context
+    ctx = _truncate_text(text, Config.MAX_TEXT_LENGTH_QA)
     convo_hint = ""
     if history:
         convo_hint += "Conversation history:\n"
@@ -234,5 +220,4 @@ Answer:
         print(f"⚠️ Q&A error: {str(e)}")
         return f"Unable to answer due to API rate limits. Please try again in a few moments. Error: {str(e)}"
     
-    # simple cleanup
     return raw.strip()
