@@ -53,4 +53,4 @@ yarn-error.log*
 .coverage
 htmlcov/
 .pytest_cache/
-Backend/start.bat
+package-lock.json

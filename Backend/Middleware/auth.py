@@ -10,16 +10,35 @@ load_dotenv()
 try:
     firebase_admin.get_app()
 except ValueError:
+    from config import Config
+    import json
     from pathlib import Path
-    key_path = Path(__file__).resolve().parent.parent / "serviceAccountKey.json"
+
+    firebase_creds_json = os.getenv("FIREBASE_CREDENTIALS")
     
-    cred = credentials.Certificate(str(key_path)) if key_path.exists() else None
-    
-    if cred:
-        firebase_admin.initialize_app(cred)
-    else:
-        print(f"⚠️ Warning: Service Account Key not found at {key_path}")
-        firebase_admin.initialize_app(options={'projectId': 'luma-362fc'})
+    if firebase_creds_json:
+        try:
+            cred_dict = json.loads(firebase_creds_json)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            print("Firebase initialized with FIREBASE_CREDENTIALS env var")
+        except Exception as e:
+            print(f"Failed to load FIREBASE_CREDENTIALS: {e}")
+            
+    if not firebase_admin._apps:
+        key_path = Path(Config.FIREBASE_KEY_PATH)
+        
+        if not key_path.is_absolute():
+            backend_root = Path(__file__).resolve().parent.parent
+            key_path = backend_root / Config.FIREBASE_KEY_PATH
+            
+        if key_path.exists():
+            cred = credentials.Certificate(str(key_path))
+            firebase_admin.initialize_app(cred)
+            print(f"Firebase initialized with key file at: {key_path}")
+        else:
+            print(f"Warning: Service Account Key not found at {key_path}")
+            firebase_admin.initialize_app(options={'projectId': Config.FIREBASE_PROJECT_ID})
 
 security = HTTPBearer()
 
