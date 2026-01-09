@@ -238,7 +238,7 @@ const Dashboard = () => {
 
                 {/* Sidebar */}
                 <div className="lg:col-span-1 space-y-6">
-                    <UsageStats />
+                    <UsageStats stats={userStats} />
 
                     <Card className="p-0 border-zinc-800 bg-zinc-900/30 overflow-hidden">
                         <div className="p-4 border-b border-zinc-800 bg-zinc-900/50">

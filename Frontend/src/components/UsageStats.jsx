@@ -5,17 +5,22 @@ import Card from './ui/Card';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
 
-export default function UsageStats() {
-    const [stats, setStats] = useState(null);
-    const [loading, setLoading] = useState(true);
+export default function UsageStats({ stats: propStats }) {
+    const [stats, setStats] = useState(propStats);
+    const [loading, setLoading] = useState(!propStats);
 
     useEffect(() => {
-        fetchStats();
-    }, []);
+        if (propStats) {
+            setStats(propStats);
+            setLoading(false);
+        } else {
+            fetchStats();
+        }
+    }, [propStats]);
 
     const fetchStats = async () => {
         try {
-            const res = await api.get('/auth/me'); // We need an endpoint for this
+            const res = await api.get('/auth/me');
             setStats(res.data);
         } catch (error) {
             console.error("Failed to fetch stats", error);
