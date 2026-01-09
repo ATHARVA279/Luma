@@ -1,6 +1,5 @@
 import os
 import json
-import time
 import re
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
@@ -13,41 +12,9 @@ genai.configure(api_key=Config.GEMINI_API_KEY)
 
 MODEL = Config.GEMINI_MODEL
 
-def _extract_retry_delay(error_message: str) -> int:
-    match = re.search(r'retry in (\d+)', error_message, re.IGNORECASE)
-    if match:
-        return int(match.group(1))
-    match = re.search(r'retry_delay.*seconds:\s*(\d+)', error_message)
-    if match:
-        return int(match.group(1))
-    return 60 
-
-def _call_gemini_with_retry(model, prompt: str, max_retries: int = None) -> str:
-    if max_retries is None:
-        max_retries = Config.GEMINI_MAX_RETRIES
-    for attempt in range(max_retries):
-        try:
-            response = model.generate_content(prompt)
-            return response.text if hasattr(response, "text") else str(response)
-        except Exception as e:
-            error_str = str(e)
-            
-            if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
-                if attempt < max_retries - 1:
-                    retry_delay = _extract_retry_delay(error_str)
-                    print(f"⏳ Rate limit hit. Retrying attempt {attempt + 1}/{max_retries} in {retry_delay}s...")
-                    time.sleep(retry_delay)
-                    continue
-                else:
-                    retry_delay = _extract_retry_delay(error_str)
-                    raise Exception(
-                        f"Gemini API rate limit exceeded. You've hit the daily quota (50 requests/day for free tier). "
-                        f"Please wait {retry_delay} seconds or upgrade your API plan at https://ai.google.dev/pricing"
-                    )
-            else:
-                raise e
-    
-    raise Exception("Failed to call Gemini API after retries")
+def _call_gemini_direct(model, prompt: str) -> str:
+    response = model.generate_content(prompt)
+    return response.text if hasattr(response, "text") else str(response)
 
 def _truncate_text(text: str, limit: int = 50000) -> str:
     return text if len(text) <= limit else text[:limit]
@@ -86,7 +53,7 @@ Text:
 
     model = genai.GenerativeModel(MODEL)
     try:
-        raw = _call_gemini_with_retry(model, prompt)
+        raw = _call_gemini_direct(model, prompt)
     except Exception as e:
         print(f"⚠️ Concept extraction error: {str(e)}")
         return {"concepts": [], "relationships": [], "error": str(e)}
@@ -148,7 +115,7 @@ Text:
 
     model = genai.GenerativeModel(MODEL)
     try:
-        raw = _call_gemini_with_retry(model, prompt)
+        raw = _call_gemini_direct(model, prompt)
     except Exception as e:
         print(f"⚠️ MCQ generation error: {str(e)}")
         raise Exception(f"Quiz generation failed: {str(e)}")
@@ -207,6 +174,7 @@ INSTRUCTIONS:
 2. If the question is related to the document's topic but asks for comparisons, alternatives, or broader context (e.g., "does Python have hooks?" when document is about React hooks), you can use your general knowledge to provide a helpful comparison or explanation while noting it's not in the original material.
 3. Keep answers concise (50-200 words) but informative.
 4. If asked about something completely unrelated to the document, politely redirect to the document's topic.
+5. IMPORTANT: Do NOT use markdown formatting in your response. Avoid using backticks (`), asterisks (*), or other markdown syntax. Write in plain text only.
 
 Question: {question}
 
@@ -215,9 +183,9 @@ Answer:
 
     model = genai.GenerativeModel(MODEL)
     try:
-        raw = _call_gemini_with_retry(model, prompt)
+        raw = _call_gemini_direct(model, prompt)
     except Exception as e:
         print(f"⚠️ Q&A error: {str(e)}")
-        return f"Unable to answer due to API rate limits. Please try again in a few moments. Error: {str(e)}"
+        return f"Unable to answer due to an error. Please try again. Error: {str(e)}"
     
     return raw.strip()

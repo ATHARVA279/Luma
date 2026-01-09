@@ -1,17 +1,19 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
+from Database.database import get_db
 
-_jobs: Dict[str, Dict[str, Any]] = {}
 
 class JobService:
     @staticmethod
-    def create_job(job_type: str, user_id: str, metadata: Dict = None) -> str:
+    async def create_job(job_type: str, user_id: str, metadata: Dict = None) -> str:
+        db = await get_db()
+        
         job_id = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.utcnow()
         
         job = {
-            "id": job_id,
+            "_id": job_id,
             "type": job_type,
             "user_id": user_id,
             "status": "pending",
@@ -23,50 +25,99 @@ class JobService:
             "updated_at": now
         }
         
-        _jobs[job_id] = job
+        await db.jobs.insert_one(job)
         return job_id
 
     @staticmethod
-    def update_job(job_id: str, status: str = None, progress: int = None, result: Dict = None, error: str = None):
-        if job_id not in _jobs:
-            return
-            
-        job = _jobs[job_id]
-        now = datetime.utcnow().isoformat()
+    async def update_job(job_id: str, status: str = None, progress: int = None, result: Dict = None, error: str = None):
+        db = await get_db()
         
-        if status:
-            job["status"] = status
+        update_fields = {"updated_at": datetime.utcnow()}
+        
+        if status is not None:
+            update_fields["status"] = status
         if progress is not None:
-            job["progress"] = progress
+            update_fields["progress"] = progress
         if result is not None:
-            job["result"] = result
+            update_fields["result"] = result
         if error is not None:
-            job["error"] = error
+            update_fields["error"] = error
             
-        job["updated_at"] = now
+        await db.jobs.update_one(
+            {"_id": job_id},
+            {"$set": update_fields}
+        )
 
     @staticmethod
-    def get_job(job_id: str, user_id: str) -> Optional[Dict]:
-        if job_id not in _jobs:
+    async def get_job(job_id: str, user_id: str) -> Optional[Dict]:
+        db = await get_db()
+        
+        job = await db.jobs.find_one({"_id": job_id, "user_id": user_id})
+        
+        if not job:
             return None
-            
-        job = _jobs[job_id]
-        if job["user_id"] != user_id:
-            return None
-            
-        return job
+        
+        return {
+            "id": job["_id"],
+            "type": job["type"],
+            "user_id": job["user_id"],
+            "status": job["status"],
+            "progress": job["progress"],
+            "result": job.get("result"),
+            "error": job.get("error"),
+            "metadata": job.get("metadata", {}),
+            "created_at": job["created_at"].isoformat() if isinstance(job["created_at"], datetime) else job["created_at"],
+            "updated_at": job["updated_at"].isoformat() if isinstance(job["updated_at"], datetime) else job["updated_at"]
+        }
 
     @staticmethod
-    def list_user_jobs(user_id: str, job_type: str = None) -> List[Dict]:
-        user_jobs = [
-            job for job in _jobs.values() 
-            if job["user_id"] == user_id and (job_type is None or job["type"] == job_type)
+    async def list_user_jobs(user_id: str, job_type: str = None, limit: int = 20) -> List[Dict]:
+        db = await get_db()
+        
+        query = {"user_id": user_id}
+        if job_type:
+            query["type"] = job_type
+            
+        cursor = db.jobs.find(query).sort("created_at", -1).limit(limit)
+        jobs = await cursor.to_list(length=limit)
+        
+        return [
+            {
+                "id": job["_id"],
+                "type": job["type"],
+                "status": job["status"],
+                "progress": job["progress"],
+                "error": job.get("error"),
+                "metadata": job.get("metadata", {}),
+                "created_at": job["created_at"].isoformat() if isinstance(job["created_at"], datetime) else job["created_at"],
+                "updated_at": job["updated_at"].isoformat() if isinstance(job["updated_at"], datetime) else job["updated_at"]
+            }
+            for job in jobs
         ]
-        
-        user_jobs.sort(key=lambda x: x["created_at"], reverse=True)
-        
-        return user_jobs
 
     @staticmethod
-    def cleanup_old_jobs(hours: int = 24):
-        pass
+    async def cleanup_old_jobs(hours: int = 24):
+        db = await get_db()
+        
+        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        
+        result = await db.jobs.delete_many({
+            "status": {"$in": ["completed", "failed"]},
+            "updated_at": {"$lt": cutoff}
+        })
+        
+        return result.deleted_count
+
+    @staticmethod
+    async def get_pending_jobs(job_type: str = None) -> List[Dict]:
+        db = await get_db()
+        
+        query = {"status": {"$in": ["pending", "processing"]}}
+        if job_type:
+            query["type"] = job_type
+            
+        cursor = db.jobs.find(query)
+        jobs = await cursor.to_list(length=100)
+        
+        return jobs
+

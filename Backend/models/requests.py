@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, validator, HttpUrl
-from typing import List, Optional, Literal
+from typing import List, Optional
 import ipaddress
 from urllib.parse import urlparse
 
@@ -33,17 +33,8 @@ class ExtractRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=1000)
-    history: List[dict] = Field(default_factory=list)
     top_k: int = Field(default=4, ge=1, le=10)
-    document_id: Optional[str] = None 
-
-class AdvancedChatRequest(BaseModel):
-    question: str = Field(..., min_length=1, max_length=1000)
-    session_id: str = Field(..., min_length=1)
-    search_method: Literal["tfidf", "bm25", "hybrid", "rrf"] = "hybrid"
-    use_memory: bool = True
-    top_k: int = Field(default=4, ge=1, le=10)
-    document_id: Optional[str] = None  
+    document_id: str = Field(..., min_length=1)
 
 class GenerateNotesRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=200)

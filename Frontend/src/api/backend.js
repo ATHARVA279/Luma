@@ -20,10 +20,7 @@ api.interceptors.request.use(async (config) => {
 
   if (user) {
     const token = await user.getIdToken();
-    console.log("DEBUG: Attaching token to request:", config.url);
     config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    console.warn("DEBUG: No user found, sending request without token:", config.url);
   }
   return config;
 });

@@ -72,21 +72,10 @@ const Dashboard = () => {
             const course = courses.find(c => c.id === id);
             const newValue = !course[type === 'favorite' ? 'is_favorite' : 'is_archived'];
 
-            if (auth.currentUser) {
-                const token = await auth.currentUser.getIdToken();
-                await fetch(`http://localhost:8000/library/${id}/status`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        [type === 'favorite' ? 'is_favorite' : 'is_archived']: newValue
-                    })
-                });
-            }
+            await api.patch(`/library/${id}/status`, {
+                [type === 'favorite' ? 'is_favorite' : 'is_archived']: newValue
+            });
         } catch (error) {
-            // Revert on error
             toast.error("Failed to update status");
             setCourses(courses);
         }
@@ -101,12 +90,9 @@ const Dashboard = () => {
         if (activeTab === 'favorites') return course.is_favorite;
         if (activeTab === 'archived') return course.is_archived;
 
-        // 'all' tab shows everything EXCEPT archived, unless it's also a favorite? 
-        // Usually 'all' means active courses. Let's hide archived from 'all'.
         return !course.is_archived;
     });
 
-    // Time-based greeting
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
     const userName = auth.currentUser?.displayName?.split(' ')[0] || 'Scholar';

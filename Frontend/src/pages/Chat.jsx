@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, Send, Trash2, Settings, Bot, User, Sparkles } from "lucide-react";
+import { MessageCircle, Send, Trash2, Bot, User } from "lucide-react";
 import { toast } from 'react-toastify';
 import { PulseLoader } from 'react-spinners';
 import api from "../api/backend";
 import NoContentMessage from "../components/NoContentMessage";
-import { hasExtractedContent } from "../utils/contentCheck";
+import { hasExtractedContent, getExtractedDocumentId } from "../utils/contentCheck";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -15,11 +15,11 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState("");
-  const [searchMethod, setSearchMethod] = useState("hybrid");
   const messagesEndRef = useRef(null);
 
-  if (!hasExtractedContent()) {
+  const documentId = getExtractedDocumentId();
+
+  if (!hasExtractedContent() || !documentId) {
     return (
       <PageLayout>
         <NoContentMessage feature="the Chat feature" />
@@ -28,10 +28,22 @@ export default function Chat() {
   }
 
   useEffect(() => {
-    const savedSessionId = localStorage.getItem("chatSessionId") || `user_${Date.now()}`;
-    localStorage.setItem("chatSessionId", savedSessionId);
-    setSessionId(savedSessionId);
-  }, []);
+    const loadHistory = async () => {
+      try {
+        const res = await api.get(`/chat/history/${documentId}`);
+        if (res.data.history && res.data.history.length > 0) {
+          const formattedMessages = res.data.history.map(msg => ({
+            role: msg.role === "assistant" ? "ai" : msg.role,
+            text: msg.content
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (err) {
+        console.log("No existing chat history for this document");
+      }
+    };
+    loadHistory();
+  }, [documentId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,14 +57,9 @@ export default function Chat() {
     setInput("");
     setLoading(true);
 
-    const documentId = localStorage.getItem("extractedDocumentId");
-
     try {
-      const res = await api.post("/chat/advanced", {
+      const res = await api.post("/chat", {
         question: input,
-        session_id: sessionId,
-        search_method: searchMethod,
-        use_memory: true,
         top_k: 4,
         document_id: documentId
       });
@@ -61,13 +68,13 @@ export default function Chat() {
         role: "ai",
         text: res.data.answer,
         sources: res.data.sources_used,
-        searchScores: res.data.search_scores,
         enhanced: res.data.query_enhanced
       };
       setMessages(prev => [...prev, aiMessage]);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to get response.");
+      const errorDetail = err.response?.data?.detail || "Failed to get response.";
+      toast.error(errorDetail);
       const errorMessage = {
         role: "ai",
         text: "Sorry, I couldn't process that. Please try again."
@@ -78,10 +85,15 @@ export default function Chat() {
     }
   };
 
-  const clearChat = () => {
-    setMessages([]);
-    api.delete(`/chat/session/${sessionId}`).catch(console.error);
-    toast.success("Chat cleared!");
+  const clearChat = async () => {
+    try {
+      await api.delete(`/chat/session/${documentId}`);
+      setMessages([]);
+      toast.success("Chat cleared!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to clear chat");
+    }
   };
 
   return (
@@ -97,20 +109,10 @@ export default function Chat() {
             <p className="text-sm text-zinc-400">Ask questions about your document</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <select
-              value={searchMethod}
-              onChange={(e) => setSearchMethod(e.target.value)}
-              className="bg-zinc-900 text-zinc-300 text-sm border border-zinc-800 rounded-lg px-3 py-1.5 focus:outline-none focus:border-violet-500"
-            >
-              <option value="hybrid">Balanced</option>
-              <option value="rrf">Accurate</option>
-              <option value="tfidf">Fast</option>
-            </select>
-            <Button variant="ghost" size="sm" onClick={clearChat} className="text-zinc-500 hover:text-red-400">
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" onClick={clearChat} className="text-zinc-500 hover:text-red-400">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Clear Chat
+          </Button>
         </div>
 
         {/* Messages Area */}
@@ -151,7 +153,7 @@ export default function Chat() {
                   {msg.role === "ai" && (
                     <div className="flex gap-2 pl-1">
                       {msg.enhanced && (
-                        <Badge variant="violet" className="text-[10px] px-1.5 py-0">Enhanced Context</Badge>
+                        <Badge variant="violet" className="text-[10px] px-1.5 py-0">Context-Aware</Badge>
                       )}
                       {msg.sources > 0 && (
                         <Badge variant="default" className="text-[10px] px-1.5 py-0">{msg.sources} Sources</Badge>
@@ -198,7 +200,7 @@ export default function Chat() {
             </Button>
           </div>
         </div>
-      </div>
-    </PageLayout>
+      </div >
+    </PageLayout >
   );
 }

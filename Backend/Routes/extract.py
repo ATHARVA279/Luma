@@ -22,9 +22,9 @@ from Middleware.rate_limit import limit_extract
 
 router = APIRouter()
 
-async def process_extraction_job(job_id: str, url: str, user_id: str):
+async def process_extraction_job(job_id: str, url: str, user_id: str, transaction_id: str):
     try:
-        JobService.update_job(job_id, status="processing", progress=10)
+        await JobService.update_job(job_id, status="processing", progress=10)
         
         try:
             async with httpx.AsyncClient(follow_redirects=True, timeout=Config.HTTP_TIMEOUT) as client:
@@ -38,7 +38,7 @@ async def process_extraction_job(job_id: str, url: str, user_id: str):
         except Exception as e:
             raise Exception(f"Failed to fetch URL: {str(e)}")
             
-        JobService.update_job(job_id, progress=30)
+        await JobService.update_job(job_id, progress=30)
         
         soup = BeautifulSoup(html, 'html.parser')
         
@@ -54,18 +54,20 @@ async def process_extraction_job(job_id: str, url: str, user_id: str):
         if not text.strip():
             raise Exception("No text found at the provided URL")
         
-        JobService.update_job(job_id, progress=40)
+        await JobService.update_job(job_id, progress=40)
         
         chunker = TextChunker(chunk_size=Config.DEFAULT_CHUNK_SIZE, overlap=Config.DEFAULT_CHUNK_OVERLAP)
         chunks_data = chunker.chunk_by_sentences(text)
         chunk_texts = [c["text"] for c in chunks_data]
         
-        JobService.update_job(job_id, progress=60)
+        await JobService.update_job(job_id, progress=60)
         
         concepts_list = []
+        relationships = []
         try:
             extraction_result = await asyncio.to_thread(extract_concepts_from_text, text)
             concepts_list = extraction_result.get("concepts", [])
+            relationships = extraction_result.get("relationships", [])
             
             if not concepts_list:
                  concepts_list = ["General Content"]
@@ -74,7 +76,7 @@ async def process_extraction_job(job_id: str, url: str, user_id: str):
             print(f"Concept extraction error: {e}")
             concepts_list = ["General Content"]
 
-        JobService.update_job(job_id, progress=70)
+        await JobService.update_job(job_id, progress=70)
         
         db = await get_db()
         
@@ -85,8 +87,6 @@ async def process_extraction_job(job_id: str, url: str, user_id: str):
                     "name": concept,
                     "extracted_at": datetime.utcnow()
                 })
-        
-        relationships = extraction_result.get("relationships", [])
         
         document = {
             "user_id": user_id,
@@ -132,7 +132,7 @@ async def process_extraction_job(job_id: str, url: str, user_id: str):
             except:
                 pass
         
-        JobService.update_job(job_id, progress=80)
+        await JobService.update_job(job_id, progress=80)
 
         from Services.persistent_vector_store import PersistentVectorStore
         
@@ -150,7 +150,10 @@ async def process_extraction_job(job_id: str, url: str, user_id: str):
         from Services.activity_service import ActivityService
         await ActivityService.log_activity(user_id, "extract", document["title"], f"Extracted {len(chunks_data)} chunks")
 
-        JobService.update_job(job_id, status="completed", progress=100, result={"document_id": doc_id})
+        from Services.credit_service import CreditService
+        await CreditService.complete_transaction(user_id, transaction_id)
+        
+        await JobService.update_job(job_id, status="completed", progress=100, result={"document_id": doc_id})
         
     except Exception as e:
         import traceback
@@ -159,9 +162,9 @@ async def process_extraction_job(job_id: str, url: str, user_id: str):
         print(f"DEBUG: Full traceback:\n{error_trace}")
     
         from Services.credit_service import CreditService
-        await CreditService.refund_credits(user_id, "extract")
+        await CreditService.refund_by_action(user_id, "extract", transaction_id)
         
-        JobService.update_job(job_id, status="failed", error=f"{str(e)}. Check server logs for details.")
+        await JobService.update_job(job_id, status="failed", error=f"{str(e)}. Check server logs for details.")
 
 @router.post("/extract", dependencies=[Depends(limit_extract)])
 async def extract_url(extract_req: ExtractRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
@@ -181,24 +184,24 @@ async def extract_url(extract_req: ExtractRequest, background_tasks: BackgroundT
         }
     
     from Services.credit_service import CreditService
-    await CreditService.check_and_deduct(current_user['uid'], "extract")
+    transaction_id = await CreditService.check_and_deduct(current_user['uid'], "extract")
 
-    job_id = JobService.create_job("extraction", current_user['uid'], {"url": str(extract_req.url)})
+    job_id = await JobService.create_job("extraction", current_user['uid'], {"url": str(extract_req.url)})
     
-    background_tasks.add_task(process_extraction_job, job_id, str(extract_req.url), current_user['uid'])
+    background_tasks.add_task(process_extraction_job, job_id, str(extract_req.url), current_user['uid'], transaction_id)
     
     return {"job_id": job_id, "status": "pending"}
 
 @router.get("/extract/status/{job_id}")
 async def get_job_status(job_id: str, current_user: dict = Depends(get_current_user)):
-    job = JobService.get_job(job_id, current_user['uid'])
+    job = await JobService.get_job(job_id, current_user['uid'])
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
 
 @router.get("/extract/jobs")
 async def list_jobs(current_user: dict = Depends(get_current_user)):
-    return JobService.list_user_jobs(current_user['uid'], "extraction")
+    return await JobService.list_user_jobs(current_user['uid'], "extraction")
 
 @router.delete("/clear-store")
 async def clear_database(current_user: dict = Depends(get_current_user)):

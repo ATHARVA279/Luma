@@ -1,6 +1,7 @@
 from Database.database import get_db
 from fastapi import HTTPException, status
 from datetime import datetime
+import uuid
 
 class CreditService:
     DEFAULT_CREDITS = 100
@@ -75,12 +76,13 @@ class CreditService:
         return max(0, days_left)
 
     @staticmethod
-    async def check_and_deduct(uid: str, action: str):
+    async def check_and_deduct(uid: str, action: str) -> str:
         cost = CreditService.COSTS.get(action, 0)
         if cost == 0:
-            return True
+            return None
 
         db = await get_db()
+        transaction_id = str(uuid.uuid4())
         
         result = await db.users.update_one(
             {
@@ -92,7 +94,15 @@ class CreditService:
                     "credits": -cost,
                     f"total_usage.{action}": 1
                 },
-                "$set": {"last_activity": datetime.utcnow()}
+                "$set": {"last_activity": datetime.utcnow()},
+                "$push": {
+                    "pending_transactions": {
+                        "id": transaction_id,
+                        "action": action,
+                        "cost": cost,
+                        "created_at": datetime.utcnow()
+                    }
+                }
             }
         )
 
@@ -107,24 +117,56 @@ class CreditService:
                 detail=f"Insufficient credits. Required: {cost}, Available: {current_credits}"
             )
             
-        return True
+        return transaction_id
 
     @staticmethod
-    async def refund_credits(uid: str, action: str):
-        cost = CreditService.COSTS.get(action, 0)
-        if cost == 0:
+    async def complete_transaction(uid: str, transaction_id: str):
+        if not transaction_id:
             return
-
+            
         db = await get_db()
         await db.users.update_one(
             {"_id": uid},
             {
-                "$inc": {
-                    "credits": cost,
-                    f"total_usage.{action}": -1 
+                "$pull": {
+                    "pending_transactions": {"id": transaction_id}
                 }
             }
         )
+
+    @staticmethod
+    async def refund_by_action(uid: str, action: str, transaction_id: str):
+        if not transaction_id:
+            return False
+            
+        cost = CreditService.COSTS.get(action, 0)
+        if cost == 0:
+            return True
+            
+        db = await get_db()
+
+        result = await db.users.update_one(
+            {
+                "_id": uid,
+                "pending_transactions.id": transaction_id
+            },
+            {
+                "$pull": {
+                    "pending_transactions": {"id": transaction_id}
+                },
+                "$inc": {
+                    "credits": cost,
+                    f"total_usage.{action}": -1
+                }
+            }
+        )
+        
+        await db.users.update_one(
+            {"_id": uid, f"total_usage.{action}": {"$lt": 0}},
+            {"$set": {f"total_usage.{action}": 0}}
+        )
+        
+        return result.modified_count > 0
 
     @staticmethod
     async def initialize_user(uid: str, email: str, name: str, picture: str):

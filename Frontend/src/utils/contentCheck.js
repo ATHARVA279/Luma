@@ -14,3 +14,7 @@ export const getExtractedInfo = () => {
   const info = localStorage.getItem("extractedInfo");
   return info ? JSON.parse(info) : null;
 };
+
+export const getExtractedDocumentId = () => {
+  return localStorage.getItem("extractedDocumentId");
+};

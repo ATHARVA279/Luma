@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 from Routes import extract, quiz, chat, warmup
-from Routes import advanced_chat, notes, library, auth
+from Routes import notes, library, auth
 
 from Middleware.auth import get_current_user
 from fastapi import Depends
@@ -35,7 +35,6 @@ app.include_router(warmup.router, tags=["system"])
 app.include_router(extract.router, tags=["extract"], dependencies=[Depends(get_current_user)])
 app.include_router(library.router, tags=["library"], dependencies=[Depends(get_current_user)])
 app.include_router(chat.router, tags=["chat"], dependencies=[Depends(get_current_user)])
-app.include_router(advanced_chat.router, tags=["advanced-chat"], dependencies=[Depends(get_current_user)])
 app.include_router(quiz.router, tags=["quiz"], dependencies=[Depends(get_current_user)])
 app.include_router(notes.router, tags=["notes"], dependencies=[Depends(get_current_user)])
 app.include_router(auth.router, tags=["auth"], prefix="/auth", dependencies=[Depends(get_current_user)])

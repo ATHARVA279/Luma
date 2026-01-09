@@ -86,7 +86,7 @@ async def generate_quiz_with_topics(quiz_req: QuizRequest, current_user: dict = 
             }
 
         from Services.credit_service import CreditService
-        await CreditService.check_and_deduct(current_user['uid'], "quiz")
+        transaction_id = await CreditService.check_and_deduct(current_user['uid'], "quiz")
 
         try:
             count = max(Config.MIN_QUIZ_QUESTIONS, min(Config.MAX_QUIZ_QUESTIONS, quiz_req.count))
@@ -146,6 +146,8 @@ async def generate_quiz_with_topics(quiz_req: QuizRequest, current_user: dict = 
             from Services.activity_service import ActivityService
             await ActivityService.log_activity(current_user['uid'], "quiz", f"Quiz: {', '.join(topics[:2])}", f"Generated {count} questions")
 
+            await CreditService.complete_transaction(current_user['uid'], transaction_id)
+            
             return {
                 "questions": quiz_json, 
                 "topics_covered": topics,
@@ -154,7 +156,7 @@ async def generate_quiz_with_topics(quiz_req: QuizRequest, current_user: dict = 
                 "source": "generated"
             }
         except Exception as e:
-            await CreditService.refund_credits(current_user['uid'], "quiz")
+            await CreditService.refund_by_action(current_user['uid'], "quiz", transaction_id)
             raise HTTPException(status_code=500, detail=f"Quiz generation failed: {str(e)}")
     except HTTPException:
         raise

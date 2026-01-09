@@ -2,79 +2,73 @@ from typing import List, Dict
 import google.generativeai as genai
 import os
 import re
-import time
+
+from config import Config
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-def _extract_retry_delay(error_message: str) -> int:
-    match = re.search(r'retry in (\d+)', error_message, re.IGNORECASE)
-    if match:
-        return int(match.group(1))
-    match = re.search(r'retry_delay.*seconds:\s*(\d+)', error_message)
-    if match:
-        return int(match.group(1))
-    return 60
-
-def _call_gemini_with_retry(model, prompt: str, max_retries: int = 2) -> str:
-    for attempt in range(max_retries):
-        try:
-            response = model.generate_content(prompt)
-            return response.text if hasattr(response, "text") else str(response)
-        except Exception as e:
-            error_str = str(e)
-            
-            if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
-                if attempt < max_retries - 1:
-                    print(f"Rate limit hit. Retrying attempt {attempt + 1}/{max_retries}...")
-                    continue
-                else:
-                    retry_delay = _extract_retry_delay(error_str)
-                    raise Exception(
-                        f"Gemini API rate limit exceeded (50 requests/day for free tier). "
-                        f"Please wait {retry_delay} seconds or upgrade at https://ai.google.dev/pricing"
-                    )
-            else:
-                raise e
-    
-    raise Exception("Failed after retries")
+def _call_gemini_direct(model, prompt: str) -> str:
+    """Direct call to Gemini API without retry logic"""
+    response = model.generate_content(prompt)
+    return response.text if hasattr(response, "text") else str(response)
 
 def _get_model():
-    return genai.GenerativeModel("gemini-2.0-flash")
+    return genai.GenerativeModel(Config.GEMINI_MODEL)
 
 def generate_study_notes(content: str, topic: str = "General") -> Dict:
     model = _get_model()
     
     try:
-        summary_prompt = f"""Analyze this content about "{topic}" and provide a concise summary (3-4 sentences):
+        combined_prompt = f"""Analyze this content about "{topic}" and provide comprehensive study materials.
+
+Return ONLY valid JSON with this EXACT structure:
+{{
+  "summary": "3-4 sentence summary here",
+  "key_points": ["point 1", "point 2", "point 3", "point 4", "point 5"],
+  "definitions": {{"term1": "definition1", "term2": "definition2"}},
+  "flashcards": [
+    {{"question": "question 1", "answer": "answer 1"}},
+    {{"question": "question 2", "answer": "answer 2"}},
+    {{"question": "question 3", "answer": "answer 3"}},
+    {{"question": "question 4", "answer": "answer 4"}},
+    {{"question": "question 5", "answer": "answer 5"}}
+  ],
+  "practice_questions": [
+    {{"question": "question 1", "difficulty": "easy", "hint": "hint 1"}},
+    {{"question": "question 2", "difficulty": "medium", "hint": "hint 2"}},
+    {{"question": "question 3", "difficulty": "hard", "hint": "hint 3"}}
+  ]
+}}
 
 Content:
-{content[:3000]}
-
-Summary:"""
-        
-        summary = _call_gemini_with_retry(model, summary_prompt).strip()
-        
-        key_points_prompt = f"""Extract 5-7 key points from "{topic}". Return as JSON array of strings:
-
 {content[:3000]}"""
         
-        key_points_text = _call_gemini_with_retry(model, key_points_prompt).strip()
-        key_points_raw = _parse_json_array(key_points_text)
+        response_text = _call_gemini_direct(model, combined_prompt).strip()
+        
+        import json
+        response_text = re.sub(r'```json\s*', '', response_text)
+        response_text = re.sub(r'```\s*', '', response_text).strip()
+        
+        start = response_text.find('{')
+        end = response_text.rfind('}')
+        if start != -1 and end != -1:
+            response_text = response_text[start:end+1]
+        
+        parsed_response = json.loads(response_text)
+        
+        summary = parsed_response.get('summary', 'Summary not available')
+        key_points_raw = parsed_response.get('key_points', [])
         key_points = _normalize_key_points(key_points_raw)
-        
-        definitions_prompt = f"""Extract important terms and definitions from "{topic}". Return as JSON object with term:definition pairs:
-
-{content[:3000]}"""
-        
-        definitions_text = _call_gemini_with_retry(model, definitions_prompt).strip()
-        definitions_raw = _parse_json_object(definitions_text)
+        definitions_raw = parsed_response.get('definitions', {})
         definitions = _normalize_definitions(definitions_raw)
-        
-        flashcards = _generate_flashcards(content, topic, model)
+        flashcards = parsed_response.get('flashcards', [
+            {"question": "What is the main topic?", "answer": topic},
+            {"question": "Key concept?", "answer": "See summary"}
+        ])
+        practice_questions = parsed_response.get('practice_questions', [
+            {"question": f"Explain the main concepts of {topic}", "difficulty": "medium", "hint": "Review the summary section"}
+        ])
         
         mind_map = _generate_mind_map(key_points, topic)
-        
-        practice_questions = _generate_practice_questions(content, topic, model)
         
         return {
             "topic": topic,
@@ -100,9 +94,9 @@ def generate_quick_summary(content: str, max_sentences: int = 3) -> str:
 {content[:2000]}"""
     
     try:
-        return _call_gemini_with_retry(model, prompt).strip()
+        return _call_gemini_direct(model, prompt).strip()
     except Exception as e:
-        return f"Summary unavailable due to rate limits: {str(e)}"
+        return f"Summary unavailable due to error: {str(e)}"
 
 def extract_key_concepts(content: str, top_n: int = 10) -> List[str]:
     model = _get_model()

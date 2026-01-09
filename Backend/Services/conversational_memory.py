@@ -1,50 +1,113 @@
-import os
 from typing import List, Dict, Optional
-from langchain.memory import ConversationBufferWindowMemory
-from langchain.schema import HumanMessage, AIMessage
-import json
+from datetime import datetime
+from Database.database import get_db
 
-_sessions = {}
 
-class ConversationSession:
+class ChatSessionService:
+    MEMORY_WINDOW = 10
+    def _build_session_id(user_id: str, document_id: str) -> str:
+        return f"{user_id}_{document_id}"
     
-    def __init__(self, session_id: str, user_id: str, k: int = 10):
-        self.session_id = session_id
-        self.user_id = user_id
-        self.memory = ConversationBufferWindowMemory(
-            k=k,
-            return_messages=True,
-            memory_key="chat_history"
-        )
-        self.metadata = {
-            "created_at": None,
-            "last_active": None,
+    @staticmethod
+    async def get_or_create_session(user_id: str, document_id: str) -> Dict:
+        db = await get_db()
+        
+        session_id = ChatSessionService._build_session_id(user_id, document_id)
+        
+        session = await db.chat_sessions.find_one({
+            "_id": session_id,
+            "user_id": user_id,
+            "document_id": document_id
+        })
+        
+        if session:
+            return session
+        
+        new_session = {
+            "_id": session_id,
+            "user_id": user_id,
+            "document_id": document_id,
+            "messages": [],
             "message_count": 0,
-            "topics_discussed": []
+            "created_at": datetime.utcnow(),
+            "last_active": datetime.utcnow()
         }
+        
+        await db.chat_sessions.insert_one(new_session)
+        return new_session
     
-    def add_message(self, human_message: str, ai_message: str):
-        self.memory.save_context(
-            {"input": human_message},
-            {"output": ai_message}
+    @staticmethod
+    async def add_message(user_id: str, document_id: str, role: str, content: str):
+        db = await get_db()
+        
+        session_id = ChatSessionService._build_session_id(user_id, document_id)
+        
+        message = {
+            "role": role,
+            "content": content,
+            "timestamp": datetime.utcnow()
+        }
+        
+        await db.chat_sessions.update_one(
+            {"_id": session_id, "user_id": user_id, "document_id": document_id},
+            {
+                "$push": {"messages": message},
+                "$inc": {"message_count": 1},
+                "$set": {"last_active": datetime.utcnow()}
+            },
+            upsert=True
         )
-        self.metadata["message_count"] += 1
-        self.metadata["last_active"] = self._get_timestamp()
     
-    def get_history(self) -> List[Dict]:
-        messages = self.memory.load_memory_variables({}).get("chat_history", [])
+    @staticmethod
+    async def add_exchange(user_id: str, document_id: str, user_message: str, ai_response: str):
+        db = await get_db()
         
-        history = []
-        for msg in messages:
-            if isinstance(msg, HumanMessage):
-                history.append({"role": "user", "content": msg.content})
-            elif isinstance(msg, AIMessage):
-                history.append({"role": "assistant", "content": msg.content})
+        session_id = ChatSessionService._build_session_id(user_id, document_id)
         
-        return history
+        now = datetime.utcnow()
+        messages = [
+            {"role": "user", "content": user_message, "timestamp": now},
+            {"role": "assistant", "content": ai_response, "timestamp": now}
+        ]
+        
+        await db.chat_sessions.update_one(
+            {"_id": session_id, "user_id": user_id, "document_id": document_id},
+            {
+                "$push": {"messages": {"$each": messages}},
+                "$inc": {"message_count": 2},
+                "$set": {"last_active": now},
+                "$setOnInsert": {"created_at": now, "document_id": document_id}
+            },
+            upsert=True
+        )
     
-    def get_context_string(self) -> str:
-        history = self.get_history()
+    @staticmethod
+    async def get_history(user_id: str, document_id: str, limit: int = None) -> List[Dict]:
+        db = await get_db()
+        
+        session_id = ChatSessionService._build_session_id(user_id, document_id)
+        
+        session = await db.chat_sessions.find_one(
+            {"_id": session_id, "user_id": user_id, "document_id": document_id},
+            {"messages": 1}
+        )
+        
+        if not session or "messages" not in session:
+            return []
+        
+        messages = session["messages"]
+        
+        if limit:
+            messages = messages[-limit:]
+        
+        return [{"role": m["role"], "content": m["content"]} for m in messages]
+    
+    @staticmethod
+    async def get_context_string(user_id: str, document_id: str) -> str:
+        history = await ChatSessionService.get_history(
+            user_id, document_id, 
+            limit=ChatSessionService.MEMORY_WINDOW
+        )
         
         if not history:
             return "No previous conversation."
@@ -56,110 +119,91 @@ class ConversationSession:
         
         return "\n".join(context_parts)
     
-    def clear_memory(self):
-        self.memory.clear()
-        self.metadata["message_count"] = 0
+    @staticmethod
+    async def enhance_query(query: str, user_id: str, document_id: str) -> str:
+        history = await ChatSessionService.get_history(user_id, document_id, limit=4)
+        
+        if not history:
+            return query
+        
+        is_followup = (
+            len(query.split()) < 5 or
+            any(word in query.lower() for word in ['it', 'this', 'that', 'they', 'them', 'its', 'more', 'explain'])
+        )
+        
+        if is_followup and len(history) >= 2:
+            recent = history[-2:]
+            context = " ".join([msg["content"] for msg in recent])
+            return f"{context} {query}"
+        
+        return query
     
-    def _get_timestamp(self):
-        from datetime import datetime
-        return datetime.now().isoformat()
+    @staticmethod
+    async def clear_session(user_id: str, document_id: str):
+        db = await get_db()
+        
+        session_id = ChatSessionService._build_session_id(user_id, document_id)
+        
+        await db.chat_sessions.update_one(
+            {"_id": session_id, "user_id": user_id, "document_id": document_id},
+            {
+                "$set": {
+                    "messages": [],
+                    "message_count": 0,
+                    "last_active": datetime.utcnow()
+                }
+            }
+        )
     
-    def get_summary(self) -> Dict:
+    @staticmethod
+    async def delete_session(user_id: str, document_id: str):
+        db = await get_db()
+        session_id = ChatSessionService._build_session_id(user_id, document_id)
+        await db.chat_sessions.delete_one({"_id": session_id, "user_id": user_id, "document_id": document_id})
+    
+    @staticmethod
+    async def get_user_sessions(user_id: str, limit: int = 10) -> List[Dict]:
+        db = await get_db()
+        
+        cursor = db.chat_sessions.find(
+            {"user_id": user_id},
+            {"_id": 1, "document_id": 1, "message_count": 1, "last_active": 1, "created_at": 1}
+        ).sort("last_active", -1).limit(limit)
+        
+        sessions = await cursor.to_list(length=limit)
+        
+        return [
+            {
+                "session_id": s["_id"],
+                "document_id": s.get("document_id"),
+                "message_count": s.get("message_count", 0),
+                "last_active": s.get("last_active").isoformat() if s.get("last_active") else None,
+                "created_at": s.get("created_at").isoformat() if s.get("created_at") else None
+            }
+            for s in sessions
+        ]
+    
+    @staticmethod
+    async def get_session_summary(user_id: str, document_id: str) -> Optional[Dict]:
+        """Get summary info for a session."""
+        db = await get_db()
+        
+        session_id = ChatSessionService._build_session_id(user_id, document_id)
+        
+        session = await db.chat_sessions.find_one(
+            {"_id": session_id, "user_id": user_id, "document_id": document_id},
+            {"messages": 0}  # Exclude messages for performance
+        )
+        
+        if not session:
+            return None
+        
         return {
-            "session_id": self.session_id,
-            "user_id": self.user_id,
-            "message_count": self.metadata["message_count"],
-            "last_active": self.metadata["last_active"],
-            "history_length": len(self.get_history())
+            "session_id": session["_id"],
+            "user_id": session["user_id"],
+            "document_id": session.get("document_id"),
+            "message_count": session.get("message_count", 0),
+            "last_active": session.get("last_active").isoformat() if session.get("last_active") else None,
+            "created_at": session.get("created_at").isoformat() if session.get("created_at") else None
         }
 
-def get_or_create_session(session_id: str, user_id: str, memory_window: int = 10) -> ConversationSession:
-    if session_id in _sessions:
-        session = _sessions[session_id]
-        if session.user_id != user_id:
-            raise PermissionError(f"Session {session_id} belongs to another user")
-        return session
-    
-    session = ConversationSession(session_id, user_id, k=memory_window)
-    _sessions[session_id] = session
-    return session
-
-def add_conversation_exchange(session_id: str, user_id: str, user_message: str, ai_response: str):
-    try:
-        session = get_or_create_session(session_id, user_id)
-        session.add_message(user_message, ai_response)
-    except PermissionError:
-        pass
-
-def get_conversation_history(session_id: str, user_id: str) -> List[Dict]:
-    if session_id not in _sessions:
-        return []
-    
-    session = _sessions[session_id]
-    if session.user_id != user_id:
-        return []
-        
-    return session.get_history()
-
-def get_conversation_context(session_id: str, user_id: str) -> str:
-    if session_id not in _sessions:
-        return "No previous conversation."
-    
-    session = _sessions[session_id]
-    if session.user_id != user_id:
-        return "No previous conversation."
-        
-    return session.get_context_string()
-
-def clear_session(session_id: str, user_id: str):
-    if session_id in _sessions:
-        session = _sessions[session_id]
-        if session.user_id == user_id:
-            session.clear_memory()
-
-def delete_session(session_id: str, user_id: str):
-    if session_id in _sessions:
-        session = _sessions[session_id]
-        if session.user_id == user_id:
-            del _sessions[session_id]
-
-def get_active_sessions(user_id: str) -> List[Dict]:
-    return [
-        session.get_summary() 
-        for session in _sessions.values() 
-        if session.user_id == user_id
-    ]
-
-def get_session_summary(session_id: str, user_id: str) -> Optional[Dict]:
-    if session_id in _sessions:
-        session = _sessions[session_id]
-        if session.user_id == user_id:
-            return session.get_summary()
-    return None
-
-def enhance_query_with_context(query: str, session_id: str, user_id: str) -> str:
-    if session_id not in _sessions:
-        return query
-    
-    session = _sessions[session_id]
-    if session.user_id != user_id:
-        return query
-    
-    history = session.get_history()
-    
-    if not history:
-        return query
-    
-    recent_messages = history[-4:] if len(history) > 4 else history
-    
-    is_followup = (
-        len(query.split()) < 5 or
-        any(word in query.lower() for word in ['it', 'this', 'that', 'they', 'them', 'its'])
-    )
-    
-    if is_followup and len(recent_messages) >= 2:
-        context = " ".join([msg["content"] for msg in recent_messages[-2:]])
-        enhanced_query = f"{context} {query}"
-        return enhanced_query
-    
-    return query

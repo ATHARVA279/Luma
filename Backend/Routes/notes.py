@@ -52,7 +52,7 @@ async def generate_notes(req: NotesRequest, current_user: dict = Depends(get_cur
             }
 
         from Services.credit_service import CreditService
-        await CreditService.check_and_deduct(current_user['uid'], "notes")
+        transaction_id = await CreditService.check_and_deduct(current_user['uid'], "notes")
 
         try:
             if req.use_stored_content and not req.content:
@@ -103,6 +103,8 @@ async def generate_notes(req: NotesRequest, current_user: dict = Depends(get_cur
             from Services.activity_service import ActivityService
             await ActivityService.log_activity(current_user['uid'], "note", req.topic, "Generated study notes")
 
+            await CreditService.complete_transaction(current_user['uid'], transaction_id)
+            
             return {
                 "success": True,
                 "topic": req.topic,
@@ -111,7 +113,7 @@ async def generate_notes(req: NotesRequest, current_user: dict = Depends(get_cur
                 "source": "generated"
             }
         except Exception as e:
-            await CreditService.refund_credits(current_user['uid'], "notes")
+            await CreditService.refund_by_action(current_user['uid'], "notes", transaction_id)
             raise HTTPException(status_code=500, detail=f"Note generation failed: {str(e)}")
     except HTTPException:
         raise
@@ -119,7 +121,7 @@ async def generate_notes(req: NotesRequest, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
 @router.post("/notes/summary", dependencies=[Depends(limit_notes)])
-def create_summary(req: SummaryRequest):
+async def create_summary(req: SummaryRequest, current_user: dict = Depends(get_current_user)):
     if not req.content or len(req.content.strip()) < 50:
         raise HTTPException(status_code=400, detail="Content too short for summarization")
     
@@ -136,15 +138,19 @@ def create_summary(req: SummaryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Summarization failed: {str(e)}")
 
+class ConceptsRequest(BaseModel):
+    content: str
+    top_n: int = 10
+
 @router.post("/notes/concepts", dependencies=[Depends(limit_notes)])
-def get_key_concepts(content: str, top_n: int = 10):
+async def get_key_concepts(req: ConceptsRequest, current_user: dict = Depends(get_current_user)):
     """Extract key concepts from content"""
     
-    if not content or len(content.strip()) < 50:
+    if not req.content or len(req.content.strip()) < 50:
         raise HTTPException(status_code=400, detail="Content too short")
     
     try:
-        concepts = extract_key_concepts(content, top_n)
+        concepts = extract_key_concepts(req.content, req.top_n)
         
         return {
             "success": True,
