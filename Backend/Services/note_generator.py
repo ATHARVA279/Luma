@@ -7,7 +7,6 @@ from config import Config
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 def _call_gemini_direct(model, prompt: str) -> str:
-    """Direct call to Gemini API without retry logic"""
     response = model.generate_content(prompt)
     return response.text if hasattr(response, "text") else str(response)
 

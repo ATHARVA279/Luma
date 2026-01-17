@@ -1,8 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Link as LinkIcon, Sparkles, Trash2, Rocket, Target, Settings, RotateCcw, ArrowRight, FileText, Brain, MessageCircle } from "lucide-react";
-import { toast } from 'react-toastify';
-import { PulseLoader } from 'react-spinners';
+import {
+  Link as LinkIcon,
+  Sparkles,
+  Trash2,
+  Rocket,
+  Target,
+  Settings,
+  RotateCcw,
+  ArrowRight,
+  FileText,
+  Brain,
+  MessageCircle,
+} from "lucide-react";
+import { toast } from "react-toastify";
+import { PulseLoader } from "react-spinners";
 import api from "../api/backend";
 import ConceptCard from "../components/ConceptCard";
 import PageLayout from "../components/layout/PageLayout";
@@ -32,14 +44,17 @@ export default function Home() {
           const info = {
             url: doc.url,
             textLength: doc.text_content?.length || 0,
-            chunksIndexed: doc.metadata?.total_chunks || 0
+            chunksIndexed: doc.metadata?.total_chunks || 0,
           };
 
           setExtractedInfo(info);
           setConcepts(doc.concepts || []);
           setUrl(doc.url);
 
-          localStorage.setItem("extractedConcepts", JSON.stringify(doc.concepts || []));
+          localStorage.setItem(
+            "extractedConcepts",
+            JSON.stringify(doc.concepts || []),
+          );
           localStorage.setItem("extractedInfo", JSON.stringify(info));
           localStorage.setItem("extractedUrl", doc.url);
           localStorage.setItem("extractedDocumentId", id);
@@ -49,7 +64,7 @@ export default function Home() {
           console.error("Failed to load document", e);
           toast.error("Failed to load document");
           setLoading(false);
-          navigate('/');
+          navigate("/");
         }
       };
       loadDocument();
@@ -130,17 +145,19 @@ export default function Home() {
           const info = {
             url: doc.url,
             textLength: doc.text_content?.length || 0,
-            chunksIndexed: doc.metadata?.total_chunks || 0
+            chunksIndexed: doc.metadata?.total_chunks || 0,
           };
 
           setExtractedInfo(info);
           setConcepts(doc.concepts || []);
 
-          localStorage.setItem("extractedConcepts", JSON.stringify(doc.concepts || []));
+          localStorage.setItem(
+            "extractedConcepts",
+            JSON.stringify(doc.concepts || []),
+          );
           localStorage.setItem("extractedInfo", JSON.stringify(info));
           localStorage.setItem("extractedUrl", url);
           localStorage.setItem("extractedDocumentId", data.document_id);
-
         } catch (e) {
           toast.error("Failed to load document details");
         }
@@ -155,7 +172,9 @@ export default function Home() {
           const { status, progress, result, error } = job.data;
 
           setProgress(progress);
-          setStatus(status === "processing" ? `Extracting... ${progress}%` : status);
+          setStatus(
+            status === "processing" ? `Extracting... ${progress}%` : status,
+          );
 
           if (status === "completed") {
             setLoading(false);
@@ -167,13 +186,16 @@ export default function Home() {
               const info = {
                 url: doc.url,
                 textLength: doc.text_content?.length || 0,
-                chunksIndexed: 0
+                chunksIndexed: 0,
               };
 
               setExtractedInfo(info);
               setConcepts(doc.concepts || []);
 
-              localStorage.setItem("extractedConcepts", JSON.stringify(doc.concepts || []));
+              localStorage.setItem(
+                "extractedConcepts",
+                JSON.stringify(doc.concepts || []),
+              );
               localStorage.setItem("extractedInfo", JSON.stringify(info));
               localStorage.setItem("extractedUrl", url);
               localStorage.setItem("extractedDocumentId", result.document_id);
@@ -182,7 +204,6 @@ export default function Home() {
             } catch (e) {
               toast.success("Extraction complete!");
             }
-
           } else if (status === "failed") {
             setLoading(false);
             toast.error(`Extraction failed: ${error}`);
@@ -195,7 +216,6 @@ export default function Home() {
       };
 
       pollStatus();
-
     } catch (err) {
       setLoading(false);
       toast.error("Failed to start extraction.");
@@ -203,13 +223,18 @@ export default function Home() {
   };
 
   const handleConceptClick = (concept) => {
-    const topicName = typeof concept === 'string' ? concept : concept.title || concept.name || concept;
+    const topicName =
+      typeof concept === "string"
+        ? concept
+        : concept.title || concept.name || concept;
     navigate("/notes", { state: { topic: topicName } });
   };
 
   const handleClearData = async () => {
     const confirmClear = () => {
-      if (window.confirm("Start a new extraction? This will clear current view.")) {
+      if (
+        window.confirm("Start a new extraction? This will clear current view.")
+      ) {
         localStorage.removeItem("extractedConcepts");
         localStorage.removeItem("extractedInfo");
         localStorage.removeItem("extractedUrl");
@@ -230,13 +255,19 @@ export default function Home() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center p-2 bg-zinc-900 rounded-full mb-6 border border-zinc-800">
             <Sparkles className="w-4 h-4 text-violet-400 mr-2" />
-            <span className="text-xs font-medium text-zinc-400">AI-Powered Learning</span>
+            <span className="text-xs font-medium text-zinc-400">
+              AI-Powered Learning
+            </span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-zinc-100 mb-4 tracking-tight">
-            Transform content into <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">knowledge</span>
+            Transform content into{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">
+              knowledge
+            </span>
           </h1>
           <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-            Enter any URL to generate study notes, quizzes, and interactive chat sessions instantly.
+            Enter any URL to generate study notes, quizzes, and interactive chat
+            sessions instantly.
           </p>
         </div>
 
@@ -261,7 +292,7 @@ export default function Home() {
                 placeholder="https://example.com/article"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleExtract()}
+                onKeyPress={(e) => e.key === "Enter" && handleExtract()}
                 className="pl-11 py-4 text-lg bg-zinc-950 border-zinc-800 focus:border-violet-500"
               />
             </div>
@@ -344,15 +375,32 @@ export default function Home() {
         {!concepts.length && !loading && !extractedInfo && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             {[
-              { icon: FileText, title: "Smart Notes", desc: "Auto-generated summaries and key points" },
-              { icon: Brain, title: "AI Quiz", desc: "Test your knowledge with generated questions" },
-              { icon: MessageCircle, title: "Chat Assistant", desc: "Ask questions directly to your content" }
+              {
+                icon: FileText,
+                title: "Smart Notes",
+                desc: "Auto-generated summaries and key points",
+              },
+              {
+                icon: Brain,
+                title: "AI Quiz",
+                desc: "Test your knowledge with generated questions",
+              },
+              {
+                icon: MessageCircle,
+                title: "Chat Assistant",
+                desc: "Ask questions directly to your content",
+              },
             ].map((feature, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-zinc-900/30 border border-zinc-800/50">
+              <div
+                key={i}
+                className="p-6 rounded-2xl bg-zinc-900/30 border border-zinc-800/50"
+              >
                 <div className="w-12 h-12 mx-auto bg-zinc-900 rounded-xl flex items-center justify-center mb-4 border border-zinc-800">
                   <feature.icon className="w-6 h-6 text-zinc-400" />
                 </div>
-                <h3 className="font-semibold text-zinc-200 mb-2">{feature.title}</h3>
+                <h3 className="font-semibold text-zinc-200 mb-2">
+                  {feature.title}
+                </h3>
                 <p className="text-sm text-zinc-500">{feature.desc}</p>
               </div>
             ))}
