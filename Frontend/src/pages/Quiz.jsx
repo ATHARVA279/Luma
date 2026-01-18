@@ -1,10 +1,21 @@
 import { useState } from "react";
-import { CheckCircle, Target, Lightbulb, Check, X, ArrowRight, RotateCcw } from "lucide-react";
-import { toast } from 'react-toastify';
+import {
+  CheckCircle,
+  Target,
+  Lightbulb,
+  Check,
+  X,
+  ArrowRight,
+  RotateCcw,
+} from "lucide-react";
+import { toast } from "react-toastify";
 import api from "../api/backend";
 import Loader from "../components/Loader";
 import NoContentMessage from "../components/NoContentMessage";
-import { hasExtractedContent, getExtractedConcepts } from "../utils/contentCheck";
+import {
+  hasExtractedContent,
+  getExtractedConcepts,
+} from "../utils/contentCheck";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -30,17 +41,18 @@ export default function Quiz() {
   const concepts = getExtractedConcepts();
 
   const toggleTopic = (topic) => {
-    const topicText = typeof topic === 'string' ? topic : topic.title || topic.name || topic;
-    setSelectedTopics(prev =>
+    const topicText =
+      typeof topic === "string" ? topic : topic.title || topic.name || topic;
+    setSelectedTopics((prev) =>
       prev.includes(topicText)
-        ? prev.filter(t => t !== topicText)
-        : [...prev, topicText]
+        ? prev.filter((t) => t !== topicText)
+        : [...prev, topicText],
     );
   };
 
   const selectAllTopics = () => {
-    const allTopics = concepts.map(item =>
-      typeof item === 'string' ? item : item.title || item.name || item
+    const allTopics = concepts.map((item) =>
+      typeof item === "string" ? item : item.title || item.name || item,
     );
     setSelectedTopics(allTopics);
   };
@@ -73,10 +85,10 @@ export default function Quiz() {
 
     try {
       toast.info("Generating quiz questions...");
-      const res = await api.post('/quiz/generate', {
+      const res = await api.post("/quiz/generate", {
         count,
         topics: selectedTopics,
-        document_id: documentId
+        document_id: documentId,
       });
       setQuestions(res.data.questions || []);
       toast.success(`Quiz ready with ${count} questions!`);
@@ -108,7 +120,7 @@ export default function Quiz() {
 
   const getCorrectIndex = (answerLetter) => {
     if (!answerLetter) return -1;
-    return answerLetter.toUpperCase().charCodeAt(0) - 65; // A=0, B=1, etc.
+    return answerLetter.toUpperCase().charCodeAt(0) - 65;
   };
 
   const submitQuiz = async () => {
@@ -129,17 +141,18 @@ export default function Quiz() {
 
     const percentage = Math.round((correctCount / questions.length) * 100);
     if (percentage >= 80) toast.success(`Excellent! You scored ${percentage}%`);
-    else if (percentage >= 60) toast.info(`Good job! You scored ${percentage}%`);
+    else if (percentage >= 60)
+      toast.info(`Good job! You scored ${percentage}%`);
     else toast.warning(`You scored ${percentage}%. Keep studying!`);
 
     // Save result to backend
     try {
       const documentId = localStorage.getItem("extractedDocumentId");
-      await api.post('/quiz/result', {
+      await api.post("/quiz/result", {
         score: correctCount,
         total: questions.length,
         topics: selectedTopics,
-        document_id: documentId
+        document_id: documentId,
       });
     } catch (error) {
       console.error("Failed to save quiz result", error);
@@ -167,7 +180,8 @@ export default function Quiz() {
             AI Quiz Generator
           </h1>
           <p className="text-zinc-400">
-            Test your understanding with AI-generated questions tailored to your content.
+            Test your understanding with AI-generated questions tailored to your
+            content.
           </p>
         </div>
 
@@ -177,17 +191,26 @@ export default function Quiz() {
               <h3 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
                 <Target className="w-5 h-5 text-violet-400" />
                 Select Topics
-                <Badge variant="default" className="ml-2">{selectedTopics.length} selected</Badge>
+                <Badge variant="default" className="ml-2">
+                  {selectedTopics.length} selected
+                </Badge>
               </h3>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={selectAllTopics}>Select All</Button>
-                <Button variant="ghost" size="sm" onClick={clearAllTopics}>Clear</Button>
+                <Button variant="ghost" size="sm" onClick={selectAllTopics}>
+                  Select All
+                </Button>
+                <Button variant="ghost" size="sm" onClick={clearAllTopics}>
+                  Clear
+                </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
               {concepts.map((item, i) => {
-                const conceptText = typeof item === 'string' ? item : item.title || item.name || item;
+                const conceptText =
+                  typeof item === "string"
+                    ? item
+                    : item.title || item.name || item;
                 const isSelected = selectedTopics.includes(conceptText);
                 return (
                   <button
@@ -195,13 +218,16 @@ export default function Quiz() {
                     onClick={() => toggleTopic(item)}
                     className={`
                       p-3 rounded-lg text-sm transition-all border text-left flex items-center gap-2
-                      ${isSelected
-                        ? 'bg-violet-500/10 border-violet-500/50 text-violet-200'
-                        : 'bg-zinc-800/30 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300'
+                      ${
+                        isSelected
+                          ? "bg-violet-500/10 border-violet-500/50 text-violet-200"
+                          : "bg-zinc-800/30 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300"
                       }
                     `}
                   >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'border-violet-500 bg-violet-500' : 'border-zinc-600'}`}>
+                    <div
+                      className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? "border-violet-500 bg-violet-500" : "border-zinc-600"}`}
+                    >
                       {isSelected && <Check className="w-3 h-3 text-white" />}
                     </div>
                     <span className="truncate">{conceptText}</span>
@@ -212,11 +238,13 @@ export default function Quiz() {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-zinc-800 pt-6">
               <div>
-                <h4 className="text-sm font-medium text-zinc-300 mb-1">Number of Questions</h4>
+                <h4 className="text-sm font-medium text-zinc-300 mb-1">
+                  Number of Questions
+                </h4>
                 <p className="text-xs text-zinc-500">Choose quiz length</p>
               </div>
               <div className="flex gap-3">
-                {[5, 10, 15].map(num => (
+                {[5, 10, 15].map((num) => (
                   <Button
                     key={num}
                     variant="secondary"
@@ -234,7 +262,9 @@ export default function Quiz() {
         {loading && (
           <div className="text-center py-20">
             <Loader />
-            <p className="text-zinc-400 mt-6 text-sm animate-pulse">Generating tailored questions...</p>
+            <p className="text-zinc-400 mt-6 text-sm animate-pulse">
+              Generating tailored questions...
+            </p>
           </div>
         )}
 
@@ -242,13 +272,16 @@ export default function Quiz() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {questions.map((q, i) => {
               const difficultyColors = {
-                easy: 'success',
-                medium: 'warning',
-                hard: 'danger'
+                easy: "success",
+                medium: "warning",
+                hard: "danger",
               };
 
               return (
-                <Card key={i} className={`p-6 transition-all ${submitted ? (isCorrect(i) ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5') : ''}`}>
+                <Card
+                  key={i}
+                  className={`p-6 transition-all ${submitted ? (isCorrect(i) ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5") : ""}`}
+                >
                   <div className="flex items-start justify-between gap-4 mb-6">
                     <div className="flex gap-4">
                       <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-sm border border-zinc-700">
@@ -261,7 +294,11 @@ export default function Quiz() {
                       </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
-                      {q.difficulty && <Badge variant={difficultyColors[q.difficulty]}>{q.difficulty}</Badge>}
+                      {q.difficulty && (
+                        <Badge variant={difficultyColors[q.difficulty]}>
+                          {q.difficulty}
+                        </Badge>
+                      )}
                       {q.type && <Badge variant="default">{q.type}</Badge>}
                     </div>
                   </div>
@@ -272,13 +309,19 @@ export default function Quiz() {
                       const correctIndex = getCorrectIndex(q.answer);
                       const isCorrectAnswer = idx === correctIndex;
 
-                      let optionClass = "border-zinc-800 hover:bg-zinc-800/50 hover:border-zinc-700";
+                      let optionClass =
+                        "border-zinc-800 hover:bg-zinc-800/50 hover:border-zinc-700";
                       if (submitted) {
-                        if (isCorrectAnswer) optionClass = "border-emerald-500/50 bg-emerald-500/10 text-emerald-200";
-                        else if (isSelected && !isCorrectAnswer) optionClass = "border-red-500/50 bg-red-500/10 text-red-200";
+                        if (isCorrectAnswer)
+                          optionClass =
+                            "border-emerald-500/50 bg-emerald-500/10 text-emerald-200";
+                        else if (isSelected && !isCorrectAnswer)
+                          optionClass =
+                            "border-red-500/50 bg-red-500/10 text-red-200";
                         else optionClass = "border-zinc-800 opacity-50";
                       } else if (isSelected) {
-                        optionClass = "border-violet-500 bg-violet-500/10 text-violet-200";
+                        optionClass =
+                          "border-violet-500 bg-violet-500/10 text-violet-200";
                       }
 
                       return (
@@ -291,19 +334,30 @@ export default function Quiz() {
                             name={`q-${i}`}
                             value={opt}
                             checked={isSelected}
-                            onChange={(e) => setAnswers({ ...answers, [i]: e.target.value })}
+                            onChange={(e) =>
+                              setAnswers({ ...answers, [i]: e.target.value })
+                            }
                             disabled={submitted}
                             className="hidden"
                           />
-                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center mr-4 ${isSelected || (submitted && isCorrectAnswer)
-                            ? 'border-current'
-                            : 'border-zinc-600'
-                            }`}>
-                            {(isSelected || (submitted && isCorrectAnswer)) && <div className="w-2.5 h-2.5 rounded-full bg-current" />}
+                          <div
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center mr-4 ${
+                              isSelected || (submitted && isCorrectAnswer)
+                                ? "border-current"
+                                : "border-zinc-600"
+                            }`}
+                          >
+                            {(isSelected || (submitted && isCorrectAnswer)) && (
+                              <div className="w-2.5 h-2.5 rounded-full bg-current" />
+                            )}
                           </div>
                           <span className="text-sm font-medium">{opt}</span>
-                          {submitted && isCorrectAnswer && <Check className="w-5 h-5 ml-auto text-emerald-500" />}
-                          {submitted && isSelected && !isCorrectAnswer && <X className="w-5 h-5 ml-auto text-red-500" />}
+                          {submitted && isCorrectAnswer && (
+                            <Check className="w-5 h-5 ml-auto text-emerald-500" />
+                          )}
+                          {submitted && isSelected && !isCorrectAnswer && (
+                            <X className="w-5 h-5 ml-auto text-red-500" />
+                          )}
                         </label>
                       );
                     })}
@@ -315,7 +369,9 @@ export default function Quiz() {
                         <Lightbulb className="w-4 h-4" />
                         Explanation
                       </p>
-                      <p className="text-sm text-zinc-400 leading-relaxed">{q.explanation}</p>
+                      <p className="text-sm text-zinc-400 leading-relaxed">
+                        {q.explanation}
+                      </p>
                     </div>
                   )}
                 </Card>
@@ -340,7 +396,9 @@ export default function Quiz() {
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-800 mb-6">
                   <CheckCircle className="w-8 h-8 text-emerald-500" />
                 </div>
-                <h3 className="text-3xl font-bold text-zinc-100 mb-2">Quiz Complete!</h3>
+                <h3 className="text-3xl font-bold text-zinc-100 mb-2">
+                  Quiz Complete!
+                </h3>
                 <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400 mb-2">
                   {score}/{questions.length}
                 </div>

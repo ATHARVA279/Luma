@@ -34,7 +34,7 @@ export default function UsageStats({ stats: propStats }) {
     if (!stats) return null;
 
     const credits = stats.credits || 0;
-    const maxCredits = 100; // Hardcoded for free plan for now
+    const maxCredits = 100;
     const percentage = Math.min(100, (credits / maxCredits) * 100);
 
     // Determine color based on percentage
