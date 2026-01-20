@@ -22,6 +22,20 @@ from Middleware.rate_limit import limit_extract
 
 router = APIRouter()
 
+def parse_and_clean_html(html: str) -> str:
+    soup = BeautifulSoup(html, 'html.parser')
+    for script in soup(["script", "style"]):
+        script.decompose()
+
+    text = soup.get_text()
+    lines = (line.strip() for line in text.splitlines())
+    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+    return '\n'.join(chunk for chunk in chunks if chunk)
+
+def chunk_text(text: str) -> List[dict]:
+    chunker = TextChunker(chunk_size=Config.DEFAULT_CHUNK_SIZE, overlap=Config.DEFAULT_CHUNK_OVERLAP)
+    return chunker.chunk_by_sentences(text)
+
 async def process_extraction_job(job_id: str, url: str, user_id: str, transaction_id: str):
     try:
         await JobService.update_job(job_id, status="processing", progress=10)
@@ -40,24 +54,14 @@ async def process_extraction_job(job_id: str, url: str, user_id: str, transactio
             
         await JobService.update_job(job_id, progress=30)
         
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        for script in soup(["script", "style"]):
-            script.decompose()
-            
-        text = soup.get_text()
-        
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = '\n'.join(chunk for chunk in chunks if chunk)
+        text = await asyncio.to_thread(parse_and_clean_html, html)
         
         if not text.strip():
             raise Exception("No text found at the provided URL")
         
         await JobService.update_job(job_id, progress=40)
         
-        chunker = TextChunker(chunk_size=Config.DEFAULT_CHUNK_SIZE, overlap=Config.DEFAULT_CHUNK_OVERLAP)
-        chunks_data = chunker.chunk_by_sentences(text)
+        chunks_data = await asyncio.to_thread(chunk_text, text)
         chunk_texts = [c["text"] for c in chunks_data]
         
         await JobService.update_job(job_id, progress=60)
