@@ -51,8 +51,6 @@ async def create_indexes():
         
         await db.users.create_index("email")
         
-        await db.activity_logs.create_index([("user_id", 1), ("timestamp", -1)])
-        
         print("MongoDB indexes created successfully")
     except Exception as e:
         print(f"Index creation warning (may already exist): {e}")

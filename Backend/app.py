@@ -16,7 +16,6 @@ app.add_exception_handler(DocumentNotFoundError, document_not_found_handler)
 app.add_exception_handler(LLMAPIError, llm_api_error_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=Config.CORS_ORIGINS,

@@ -37,14 +37,6 @@ async def save_quiz_result(result: QuizResultRequest, current_user: dict = Depen
         
         await db.quiz_results.insert_one(quiz_result)
         
-        from Services.activity_service import ActivityService
-        await ActivityService.log_activity(
-            current_user['uid'], 
-            "quiz_result", 
-            f"Scored {result.score}/{result.total}", 
-            f"Topics: {', '.join(result.topics[:2])}"
-        )
-        
         return {"message": "Result saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save result: {str(e)}")
@@ -142,9 +134,6 @@ async def generate_quiz_with_topics(quiz_req: QuizRequest, current_user: dict = 
                 "generation_method": "gemini-2.5-flash"
             }
             await db.document_quizzes.insert_one(new_quiz)
-            
-            from Services.activity_service import ActivityService
-            await ActivityService.log_activity(current_user['uid'], "quiz", f"Quiz: {', '.join(topics[:2])}", f"Generated {count} questions")
 
             await CreditService.complete_transaction(current_user['uid'], transaction_id)
             

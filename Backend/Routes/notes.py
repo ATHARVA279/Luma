@@ -99,9 +99,6 @@ async def generate_notes(req: NotesRequest, current_user: dict = Depends(get_cur
                 "generation_method": "gemini-2.5-flash"
             }
             await db.concept_notes.insert_one(new_note)
-            
-            from Services.activity_service import ActivityService
-            await ActivityService.log_activity(current_user['uid'], "note", req.topic, "Generated study notes")
 
             await CreditService.complete_transaction(current_user['uid'], transaction_id)
             

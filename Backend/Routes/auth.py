@@ -11,9 +11,6 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
     if not stats:
         raise HTTPException(status_code=404, detail="User stats not found")
     
-    from Services.activity_service import ActivityService
-    recent_activity = await ActivityService.get_recent_activity(current_user['uid'], limit=5)
-    
     db = await get_db()
     pipeline = [
         {"$match": {"user_id": current_user['uid']}},
@@ -31,6 +28,5 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
         "plan": stats.get("plan", "free"),
         "usage": stats.get("total_usage", {}),
         "days_until_reset": stats.get("days_until_reset", 30),
-        "recent_activity": recent_activity,
         "quiz_average": quiz_average
     }

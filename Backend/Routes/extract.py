@@ -147,9 +147,6 @@ async def process_extraction_job(job_id: str, url: str, user_id: str, transactio
             {"$set": {"summary": f"Extracted {chunks_indexed} chunks. Key topics: {', '.join(concepts_list[:3])}..."}}
         )
 
-        from Services.activity_service import ActivityService
-        await ActivityService.log_activity(user_id, "extract", document["title"], f"Extracted {len(chunks_data)} chunks")
-
         from Services.credit_service import CreditService
         await CreditService.complete_transaction(user_id, transaction_id)
         

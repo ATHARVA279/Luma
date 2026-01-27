@@ -19,14 +19,17 @@ import Loader from "./components/Loader";
 
 const ProtectedRoute = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
+  if (loading) return <Loader />;
   if (!user) return <Navigate to="/auth" />;
 
   return children;

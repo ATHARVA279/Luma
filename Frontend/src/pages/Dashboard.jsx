@@ -279,47 +279,6 @@ const Dashboard = () => {
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           <UsageStats stats={userStats} />
-
-          <Card className="p-0 border-zinc-800 bg-zinc-900/30 overflow-hidden">
-            <div className="p-4 border-b border-zinc-800 bg-zinc-900/50">
-              <h4 className="font-semibold text-zinc-200 text-sm">
-                Recent Activity
-              </h4>
-            </div>
-            <div className="divide-y divide-zinc-800/50">
-              {userStats?.recent_activity?.length > 0 ? (
-                userStats.recent_activity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="p-4 hover:bg-zinc-800/30 transition-colors cursor-pointer group"
-                  >
-                    <p className="text-xs text-zinc-500 mb-1">
-                      {new Date(activity.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                    <p className="text-sm text-zinc-300 group-hover:text-violet-300 transition-colors">
-                      <span className="capitalize">{activity.action_type}</span>
-                      :{" "}
-                      <span className="font-medium text-zinc-100">
-                        {activity.title}
-                      </span>
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="p-4 text-center text-zinc-500 text-sm">
-                  No recent activity
-                </div>
-              )}
-            </div>
-            <div className="p-3 border-t border-zinc-800 bg-zinc-900/50 text-center">
-              <button className="text-xs text-zinc-500 hover:text-violet-400 transition-colors font-medium">
-                View All Activity
-              </button>
-            </div>
-          </Card>
         </div>
       </div>
     </PageLayout>

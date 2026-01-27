@@ -47,7 +47,6 @@ An AI-powered learning platform that demonstrates **RAG (Retrieval-Augmented Gen
 - Credit-based usage system (100 free credits/month)
 - Automatic monthly credit reset
 - Usage tracking and analytics
-- Activity logging
 
 ---
 
@@ -234,7 +233,6 @@ Luma/
 │   │   ├── chunking_service.py         # Intelligent text chunking
 │   │   ├── credit_service.py           # Credit system with atomic transactions
 │   │   ├── job_service.py              # Background job processing
-│   │   ├── activity_service.py         # User activity logging
 │   │   ├── text_cleaner.py             # Web scraping & cleaning
 │   │   └── chat_utils.py               # Chat utility functions
 │   │
