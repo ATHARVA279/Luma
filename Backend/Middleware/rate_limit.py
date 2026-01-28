@@ -1,5 +1,6 @@
 from fastapi import Request, HTTPException
-from pyrate_limiter import Duration, Rate, Limiter, InMemoryBucket, BucketFullException
+from pyrate_limiter import Duration, Rate, Limiter, InMemoryBucket
+from pyrate_limiter.exceptions import BucketFullException
 from typing import Callable
 
 quiz_rate = Rate(10, Duration.HOUR)
