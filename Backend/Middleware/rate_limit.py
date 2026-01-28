@@ -1,6 +1,5 @@
 from fastapi import Request, HTTPException
 from pyrate_limiter import Duration, Rate, Limiter, InMemoryBucket
-from pyrate_limiter.exceptions import BucketFullException
 from typing import Callable
 
 quiz_rate = Rate(10, Duration.HOUR)
@@ -25,7 +24,7 @@ def create_dependency(limiter: Limiter, context_name: str) -> Callable:
         key = get_user_key(request)
         try:
             limiter.try_acquire(key)
-        except BucketFullException as err:
+        except Exception as err:
             raise HTTPException(
                 status_code=429,
                 detail=f"Rate limit exceeded for {context_name}. Please try again later."
@@ -36,4 +35,3 @@ limit_quiz = create_dependency(quiz_limiter, "Quiz Generation")
 limit_notes = create_dependency(notes_limiter, "Note Generation")
 limit_chat = create_dependency(chat_limiter, "Chat")
 limit_extract = create_dependency(extract_limiter, "URL Extraction")
-
