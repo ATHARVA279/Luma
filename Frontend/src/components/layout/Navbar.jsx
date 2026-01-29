@@ -46,13 +46,13 @@ export default function Navbar() {
                 <div className="flex justify-between items-center h-16">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-2 group">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-all">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all">
                             <Sparkles className="w-4 h-4 text-white" strokeWidth={2.5} />
                         </div>
                         <span className="font-bold text-lg tracking-tight text-zinc-100">
                             Luma
                         </span>
-                        <Badge variant="violet" className="ml-1 hidden sm:inline-flex">Beta</Badge>
+                        <Badge variant="green" className="ml-1 hidden sm:inline-flex">Beta</Badge>
                     </Link>
 
                     {/* Navigation */}

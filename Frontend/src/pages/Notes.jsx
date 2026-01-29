@@ -129,7 +129,7 @@ export default function Notes() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-zinc-100 mb-2 tracking-tight flex items-center gap-3">
-            <FileText className="w-8 h-8 text-violet-500" />
+            <FileText className="w-8 h-8 text-emerald-500" />
             AI Study Notes
           </h1>
           <p className="text-zinc-400">
@@ -187,7 +187,7 @@ export default function Notes() {
                     <button
                       key={i}
                       onClick={() => handleSuggestionClick(item)}
-                      className="px-3 py-1.5 rounded-lg text-sm bg-zinc-800/50 text-zinc-400 hover:text-violet-300 hover:bg-violet-500/10 border border-zinc-700 hover:border-violet-500/30 transition-all"
+                      className="px-3 py-1.5 rounded-lg text-sm bg-zinc-800/50 text-zinc-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-zinc-700 hover:border-emerald-500/30 transition-all"
                     >
                       {conceptText}
                     </button>
@@ -210,10 +210,10 @@ export default function Notes() {
         {notes && !loading && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Summary */}
-            <Card className="p-8 border-l-4 border-l-violet-500">
+            <Card className="p-8 border-l-4 border-l-emerald-500">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-violet-400" />
+                  <BookOpen className="w-5 h-5 text-emerald-400" />
                   Summary
                 </h2>
                 <div className="flex gap-2">
@@ -301,9 +301,9 @@ export default function Notes() {
 
             {/* Flashcards */}
             {notes.flashcards && notes.flashcards.length > 0 && (
-              <Card className="p-8 bg-gradient-to-br from-zinc-900 to-zinc-950 border-violet-500/20">
+              <Card className="p-8 bg-gradient-to-br from-zinc-900 to-zinc-950 border-emerald-500/20">
                 <h2 className="text-xl font-bold text-zinc-100 mb-6 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-violet-400" />
+                  <MessageSquare className="w-5 h-5 text-emerald-400" />
                   Flashcards
                 </h2>
 
@@ -330,12 +330,12 @@ export default function Notes() {
 
                       {/* Back */}
                       <div
-                        className={`absolute inset-0 backface-hidden bg-violet-900/20 rounded-2xl p-8 flex flex-col items-center justify-center text-center border border-violet-500/30 shadow-xl rotate-y-180 ${showAnswer ? "visible" : "invisible"}`}
+                        className={`absolute inset-0 backface-hidden bg-emerald-900/20 rounded-2xl p-8 flex flex-col items-center justify-center text-center border border-emerald-500/30 shadow-xl rotate-y-180 ${showAnswer ? "visible" : "invisible"}`}
                       >
-                        <span className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-4">
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-4">
                           Answer
                         </span>
-                        <p className="text-lg md:text-xl text-violet-100">
+                        <p className="text-lg md:text-xl text-emerald-100">
                           {notes.flashcards[flashcardIndex].answer}
                         </p>
                       </div>

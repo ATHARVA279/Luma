@@ -7,8 +7,8 @@ export default function NoContentMessage({ feature = "this feature" }) {
   return (
     <div className="flex items-center justify-center py-12">
       <div className="max-w-2xl mx-auto text-center">
-        <Card className="p-12 border-violet-500/20 bg-zinc-900/50">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/30">
+        <Card className="p-12 border-emerald-500/20 bg-zinc-900/50">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/30">
             <Lock className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-zinc-100 mb-4 tracking-tight">

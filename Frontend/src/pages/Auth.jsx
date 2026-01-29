@@ -52,7 +52,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-black text-zinc-100 p-4">
       <div className="w-full max-w-md bg-zinc-900/50 rounded-2xl shadow-2xl p-8 border border-zinc-800 backdrop-blur-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent mb-2 tracking-tight">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-500 bg-clip-text text-transparent mb-2 tracking-tight">
             {isLogin ? "Welcome Back" : "Create Account"}
           </h1>
           <p className="text-zinc-400">
@@ -113,7 +113,7 @@ const Auth = () => {
               placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 text-zinc-100 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent placeholder:text-zinc-600"
+              className="w-full bg-zinc-950 border border-zinc-800 text-zinc-100 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder:text-zinc-600"
               required
               autoComplete="off"
             />
@@ -125,7 +125,7 @@ const Auth = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 text-zinc-100 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent placeholder:text-zinc-600"
+              className="w-full bg-zinc-950 border border-zinc-800 text-zinc-100 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder:text-zinc-600"
               required
               autoComplete="new-password"
             />
@@ -134,7 +134,7 @@ const Auth = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold py-3 px-4 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+            className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold py-3 px-4 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
           >
             {loading ? (
               <Loader2 className="animate-spin" />

@@ -103,7 +103,7 @@ export default function Chat() {
         <div className="flex items-center justify-between mb-6 px-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-100 flex items-center gap-2">
-              <MessageCircle className="w-6 h-6 text-violet-500" />
+              <MessageCircle className="w-6 h-6 text-emerald-500" />
               Chat Assistant
             </h1>
             <p className="text-sm text-zinc-400">Ask questions about your document</p>
@@ -121,7 +121,7 @@ export default function Chat() {
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500">
                 <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 border border-zinc-800">
-                  <Bot className="w-8 h-8 text-violet-500" />
+                  <Bot className="w-8 h-8 text-emerald-500" />
                 </div>
                 <h3 className="text-lg font-medium text-zinc-300 mb-2">How can I help you?</h3>
                 <p className="text-sm max-w-xs mx-auto">
@@ -134,7 +134,7 @@ export default function Chat() {
               <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
                 <div className={`
                   w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
-                  ${msg.role === "user" ? "bg-zinc-800" : "bg-violet-600"}
+                  ${msg.role === "user" ? "bg-zinc-800" : "bg-emerald-600"}
                 `}>
                   {msg.role === "user" ? <User className="w-4 h-4 text-zinc-400" /> : <Bot className="w-4 h-4 text-white" />}
                 </div>
@@ -153,7 +153,7 @@ export default function Chat() {
                   {msg.role === "ai" && (
                     <div className="flex gap-2 pl-1">
                       {msg.enhanced && (
-                        <Badge variant="violet" className="text-[10px] px-1.5 py-0">Context-Aware</Badge>
+                        <Badge variant="green" className="text-[10px] px-1.5 py-0">Context-Aware</Badge>
                       )}
                       {msg.sources > 0 && (
                         <Badge variant="default" className="text-[10px] px-1.5 py-0">{msg.sources} Sources</Badge>
@@ -166,7 +166,7 @@ export default function Chat() {
 
             {loading && (
               <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
                 <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl rounded-tl-none">
@@ -185,7 +185,7 @@ export default function Chat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
             placeholder="Ask a question..."
-            className="pr-24 py-4 bg-zinc-900 border-zinc-800 focus:border-violet-500 shadow-lg"
+            className="pr-24 py-4 bg-zinc-900 border-zinc-800 focus:border-emerald-500 shadow-lg"
             disabled={loading}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2">

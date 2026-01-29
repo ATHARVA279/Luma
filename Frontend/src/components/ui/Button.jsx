@@ -6,7 +6,7 @@ const variants = {
     secondary: "bg-zinc-900 text-zinc-100 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700 shadow-sm",
     ghost: "bg-transparent text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900",
     danger: "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20",
-    gradient: "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:opacity-90 shadow-lg shadow-indigo-500/20 border border-transparent"
+    gradient: "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:opacity-90 shadow-lg shadow-emerald-500/20 border border-transparent"
 };
 
 const sizes = {

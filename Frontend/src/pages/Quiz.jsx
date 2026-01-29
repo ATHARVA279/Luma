@@ -189,7 +189,7 @@ export default function Quiz() {
           <Card className="mb-8 p-6 border-zinc-800 bg-zinc-900/40">
             <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
               <h3 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
-                <Target className="w-5 h-5 text-violet-400" />
+                <Target className="w-5 h-5 text-emerald-400" />
                 Select Topics
                 <Badge variant="default" className="ml-2">
                   {selectedTopics.length} selected
@@ -220,13 +220,13 @@ export default function Quiz() {
                       p-3 rounded-lg text-sm transition-all border text-left flex items-center gap-2
                       ${
                         isSelected
-                          ? "bg-violet-500/10 border-violet-500/50 text-violet-200"
+                          ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-200"
                           : "bg-zinc-800/30 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300"
                       }
                     `}
                   >
                     <div
-                      className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? "border-violet-500 bg-violet-500" : "border-zinc-600"}`}
+                      className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? "border-emerald-500 bg-emerald-500" : "border-zinc-600"}`}
                     >
                       {isSelected && <Check className="w-3 h-3 text-white" />}
                     </div>
@@ -321,7 +321,7 @@ export default function Quiz() {
                         else optionClass = "border-zinc-800 opacity-50";
                       } else if (isSelected) {
                         optionClass =
-                          "border-violet-500 bg-violet-500/10 text-violet-200";
+                          "border-emerald-500 bg-emerald-500/10 text-emerald-200";
                       }
 
                       return (
@@ -365,7 +365,7 @@ export default function Quiz() {
 
                   {submitted && q.explanation && (
                     <div className="mt-6 ml-12 p-4 bg-zinc-900/50 rounded-xl border border-zinc-800">
-                      <p className="text-sm text-violet-300 font-semibold mb-1 flex items-center gap-2">
+                      <p className="text-sm text-emerald-300 font-semibold mb-1 flex items-center gap-2">
                         <Lightbulb className="w-4 h-4" />
                         Explanation
                       </p>
@@ -399,7 +399,7 @@ export default function Quiz() {
                 <h3 className="text-3xl font-bold text-zinc-100 mb-2">
                   Quiz Complete!
                 </h3>
-                <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400 mb-2">
+                <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-500 mb-2">
                   {score}/{questions.length}
                 </div>
                 <p className="text-zinc-500 mb-8">

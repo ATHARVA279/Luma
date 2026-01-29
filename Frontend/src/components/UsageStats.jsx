@@ -95,14 +95,14 @@ export default function UsageStats({ stats: propStats }) {
             <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="p-3.5 rounded-lg bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 transition-colors">
                     <div className="flex items-center gap-2 mb-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                         <span className="text-xs text-zinc-500 font-medium">Plan</span>
                     </div>
                     <span className="text-sm font-semibold text-zinc-200 capitalize">{stats.plan || "Free"}</span>
                 </div>
                 <div className="p-3.5 rounded-lg bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 transition-colors">
                     <div className="flex items-center gap-2 mb-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                        <Calendar className="w-3.5 h-3.5 text-red-400" />
                         <span className="text-xs text-zinc-500 font-medium">Resets In</span>
                     </div>
                     <span className="text-sm font-semibold text-zinc-200">{stats.days_until_reset || 30} Days</span>

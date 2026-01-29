@@ -17,8 +17,8 @@ const CourseCard = ({ course, onDelete, onToggleStatus }) => {
     return (
         <Card hover className="group relative flex flex-col h-full">
             <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-violet-500/10 rounded-xl group-hover:bg-violet-500/20 transition-colors border border-violet-500/20">
-                    <BookOpen className="w-6 h-6 text-violet-400" />
+                <div className="p-3 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-colors border border-emerald-500/20">
+                    <BookOpen className="w-6 h-6 text-emerald-400" />
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     <Button
@@ -39,7 +39,7 @@ const CourseCard = ({ course, onDelete, onToggleStatus }) => {
                             e.stopPropagation();
                             onToggleStatus(course.id, 'archived');
                         }}
-                        className={`hover:bg-zinc-800 ${course.is_archived ? 'text-violet-400' : 'text-zinc-500 hover:text-violet-400'}`}
+                        className={`hover:bg-zinc-800 ${course.is_archived ? 'text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'}`}
                     >
                         <Archive className="w-4 h-4" />
                     </Button>
@@ -57,7 +57,7 @@ const CourseCard = ({ course, onDelete, onToggleStatus }) => {
                 </div>
             </div>
 
-            <h3 className="text-xl font-bold text-zinc-100 mb-2 line-clamp-2 group-hover:text-violet-400 transition-colors tracking-tight">
+            <h3 className="text-xl font-bold text-zinc-100 mb-2 line-clamp-2 group-hover:text-emerald-400 transition-colors tracking-tight">
                 {course.title}
             </h3>
 
@@ -71,7 +71,7 @@ const CourseCard = ({ course, onDelete, onToggleStatus }) => {
                     <span>Added {date}</span>
                 </div>
                 {course.concepts_count > 0 && (
-                    <Badge variant="violet">
+                    <Badge variant="green">
                         {course.concepts_count} Concepts
                     </Badge>
                 )}
@@ -80,7 +80,7 @@ const CourseCard = ({ course, onDelete, onToggleStatus }) => {
             <Button
                 variant="secondary"
                 onClick={() => navigate(`/study/${course.id}`)}
-                className="w-full group-hover:border-violet-500/30 group-hover:bg-zinc-800"
+                className="w-full group-hover:border-emerald-500/30 group-hover:bg-zinc-800"
             >
                 Continue Learning
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

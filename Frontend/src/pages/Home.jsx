@@ -254,14 +254,14 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center p-2 bg-zinc-900 rounded-full mb-6 border border-zinc-800">
-            <Sparkles className="w-4 h-4 text-violet-400 mr-2" />
+            <Sparkles className="w-4 h-4 text-emerald-400 mr-2" />
             <span className="text-xs font-medium text-zinc-400">
               AI-Powered Learning
             </span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-zinc-100 mb-4 tracking-tight">
             Transform content into{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-500">
               knowledge
             </span>
           </h1>
@@ -272,8 +272,8 @@ export default function Home() {
         </div>
 
         {initializingML && (
-          <Card className="mb-8 border-violet-500/20 bg-violet-500/5">
-            <div className="flex items-center gap-3 text-violet-300 text-sm">
+          <Card className="mb-8 border-emerald-500/20 bg-emerald-500/5">
+            <div className="flex items-center gap-3 text-emerald-300 text-sm">
               <Settings className="w-4 h-4 animate-spin" />
               Initializing AI models (first time only)...
             </div>
@@ -293,7 +293,7 @@ export default function Home() {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleExtract()}
-                className="pl-11 py-4 text-lg bg-zinc-950 border-zinc-800 focus:border-violet-500"
+                className="pl-11 py-4 text-lg bg-zinc-950 border-zinc-800 focus:border-emerald-500"
               />
             </div>
 
@@ -340,7 +340,7 @@ export default function Home() {
               </div>
               <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-violet-500 h-full transition-all duration-500 ease-out"
+                  className="bg-emerald-500 h-full transition-all duration-500 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -352,7 +352,7 @@ export default function Home() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
-                <Target className="w-5 h-5 text-violet-400" />
+                <Target className="w-5 h-5 text-emerald-400" />
                 Key Concepts
               </h3>
               <Badge variant="default">{concepts.length} Found</Badge>

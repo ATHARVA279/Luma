@@ -116,7 +116,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
       </div>
     );
   }
@@ -130,7 +130,7 @@ const Dashboard = () => {
           <div className="flex flex-col gap-2">
             <h1 className="text-3xl font-bold text-zinc-100 tracking-tight">
               {greeting},{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-500">
                 {userName}
               </span>
             </h1>
@@ -143,8 +143,8 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="p-5 border-zinc-800 bg-gradient-to-br from-zinc-900/50 to-zinc-900/30 hover:border-zinc-700 transition-all duration-300 group">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 group-hover:bg-violet-500/20 transition-colors">
-                  <BookOpen className="w-5 h-5 text-violet-400" />
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors">
+                  <BookOpen className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-3xl font-bold text-zinc-100 mb-1">
@@ -196,8 +196,8 @@ const Dashboard = () => {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === tab
-                      ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                      : "text-zinc-500 hover:text-zinc-300"
+                    ? "bg-zinc-800 text-zinc-100 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-300"
                     } capitalize`}
                 >
                   {tab}
@@ -213,19 +213,19 @@ const Dashboard = () => {
                   placeholder="Search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 bg-zinc-900 border-zinc-800 focus:border-violet-500 text-sm"
+                  className="pl-10 h-10 bg-zinc-900 border-zinc-800 focus:border-emerald-500 text-sm"
                 />
               </div>
               <div className="flex items-center gap-1 border-l border-zinc-800 pl-3">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-2 rounded-lg transition-colors ${viewMode === "grid" ? "text-violet-400 bg-violet-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === "grid" ? "text-emerald-400 bg-emerald-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-2 rounded-lg transition-colors ${viewMode === "list" ? "text-violet-400 bg-violet-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === "list" ? "text-emerald-400 bg-emerald-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
                 >
                   <List className="w-4 h-4" />
                 </button>
