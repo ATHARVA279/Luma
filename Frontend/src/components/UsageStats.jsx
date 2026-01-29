@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Zap, BarChart3, Clock, AlertCircle } from 'lucide-react';
+import { Zap, TrendingUp, Calendar, AlertCircle, Sparkles } from 'lucide-react';
 import api from '../api/backend';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
@@ -29,7 +29,7 @@ export default function UsageStats({ stats: propStats }) {
         }
     };
 
-    if (loading) return <div className="animate-pulse h-20 bg-zinc-900/50 rounded-xl" />;
+    if (loading) return <div className="animate-pulse h-64 bg-zinc-900/50 rounded-xl border border-zinc-800" />;
 
     if (!stats) return null;
 
@@ -38,46 +38,88 @@ export default function UsageStats({ stats: propStats }) {
     const percentage = Math.min(100, (credits / maxCredits) * 100);
 
     // Determine color based on percentage
-    let color = "bg-emerald-500";
-    if (percentage < 20) color = "bg-red-500";
-    else if (percentage < 50) color = "bg-amber-500";
+    let gradientColor = "from-emerald-500 to-teal-500";
+    let bgGlow = "bg-emerald-500/10";
+    let textColor = "text-emerald-400";
+    let borderColor = "border-emerald-500/20";
+
+    if (percentage < 20) {
+        gradientColor = "from-red-500 to-rose-500";
+        bgGlow = "bg-red-500/10";
+        textColor = "text-red-400";
+        borderColor = "border-red-500/20";
+    } else if (percentage < 50) {
+        gradientColor = "from-amber-500 to-orange-500";
+        bgGlow = "bg-amber-500/10";
+        textColor = "text-amber-400";
+        borderColor = "border-amber-500/20";
+    }
 
     return (
-        <Card className="p-6 border-zinc-800 bg-zinc-900/30">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-zinc-100 flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-yellow-400" fill="currentColor" />
-                    Credits Balance
-                </h3>
-                <Badge variant={percentage < 20 ? "danger" : "default"}>
-                    {credits} / {maxCredits}
-                </Badge>
-            </div>
-
-            <div className="w-full bg-zinc-800 rounded-full h-2.5 mb-4 overflow-hidden">
-                <div
-                    className={`h-full rounded-full transition-all duration-500 ${color}`}
-                    style={{ width: `${percentage}%` }}
-                />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-6">
-                <div className="p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                    <span className="text-xs text-zinc-500 block mb-1">Plan</span>
-                    <span className="text-sm font-medium text-zinc-200 capitalize">{stats.plan || "Free"}</span>
-                </div>
-                <div className="p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                    <span className="text-xs text-zinc-500 block mb-1">Resets In</span>
-                    <span className="text-sm font-medium text-zinc-200">{stats.days_until_reset || 30} Days</span>
+        <Card padding="p-4" className="border-zinc-800 bg-gradient-to-br from-zinc-900/50 to-zinc-900/30 backdrop-blur-sm">
+            {/* Header */}
+            <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl ${bgGlow} border ${borderColor}`}>
+                        <Zap className={`w-5 h-5 ${textColor}`} fill="currentColor" />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-semibold text-zinc-100">Credits Balance</h3>
+                        <p className="text-xs text-zinc-500 mt-0.5">Your monthly allowance</p>
+                    </div>
                 </div>
             </div>
 
-            {credits < 10 && (
-                <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                    <p className="text-xs text-red-300">
-                        You are running low on credits. Upgrade to Pro for unlimited access.
-                    </p>
+            {/* Credit Display */}
+            <div className="mb-6">
+                <div className="flex items-baseline gap-2 mb-3">
+                    <span className={`text-4xl font-bold bg-gradient-to-r ${gradientColor} bg-clip-text text-transparent`}>
+                        {credits}
+                    </span>
+                    <span className="text-zinc-500 text-lg font-medium">/ {maxCredits}</span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="relative w-full bg-zinc-800/80 rounded-full h-3 overflow-hidden shadow-inner">
+                    <div
+                        className={`h-full bg-gradient-to-r ${gradientColor} rounded-full transition-all duration-700 ease-out relative`}
+                        style={{ width: `${percentage}%` }}
+                    >
+                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                    </div>
+                </div>
+                <p className="text-xs text-zinc-500 mt-2">{percentage.toFixed(0)}% remaining</p>
+            </div>
+
+            {/* Info Grid */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="p-3.5 rounded-lg bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 transition-colors">
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                        <span className="text-xs text-zinc-500 font-medium">Plan</span>
+                    </div>
+                    <span className="text-sm font-semibold text-zinc-200 capitalize">{stats.plan || "Free"}</span>
+                </div>
+                <div className="p-3.5 rounded-lg bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 transition-colors">
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                        <span className="text-xs text-zinc-500 font-medium">Resets In</span>
+                    </div>
+                    <span className="text-sm font-semibold text-zinc-200">{stats.days_until_reset || 30} Days</span>
+                </div>
+            </div>
+
+            {/* Low Credit Warning */}
+            {credits < 20 && (
+                <div className={`p-3.5 rounded-lg ${bgGlow} border ${borderColor} flex items-start gap-3 animate-pulse`}>
+                    <AlertCircle className={`w-4 h-4 ${textColor} flex-shrink-0 mt-0.5`} />
+                    <div className="flex-1">
+                        <p className={`text-xs font-medium ${textColor.replace('400', '300')} leading-relaxed`}>
+                            {credits < 10
+                                ? "Critical: Running very low on credits. Consider upgrading to continue learning."
+                                : "Credits running low. Upgrade to Pro for unlimited access."}
+                        </p>
+                    </div>
                 </div>
             )}
         </Card>

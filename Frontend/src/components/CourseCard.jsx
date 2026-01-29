@@ -8,7 +8,6 @@ import Badge from './ui/Badge';
 const CourseCard = ({ course, onDelete, onToggleStatus }) => {
     const navigate = useNavigate();
 
-    // Format date
     const date = new Date(course.created_at).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',

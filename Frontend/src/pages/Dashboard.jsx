@@ -141,43 +141,49 @@ const Dashboard = () => {
 
           {/* Stats Overview Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="p-4 border-zinc-800 bg-zinc-900/30 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-violet-500/10 text-violet-400">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-zinc-100">
-                  {courses.filter((c) => !c.is_archived).length}
-                </p>
-                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-                  Active Courses
-                </p>
-              </div>
-            </Card>
-            <Card className="p-4 border-zinc-800 bg-zinc-900/30 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400">
-                <FileText className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-zinc-100">
-                  {userStats?.usage?.notes || 0}
-                </p>
-                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-                  Notes Generated
-                </p>
+            <Card className="p-5 border-zinc-800 bg-gradient-to-br from-zinc-900/50 to-zinc-900/30 hover:border-zinc-700 transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 group-hover:bg-violet-500/20 transition-colors">
+                  <BookOpen className="w-5 h-5 text-violet-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-3xl font-bold text-zinc-100 mb-1">
+                    {courses.filter((c) => !c.is_archived).length}
+                  </p>
+                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+                    Active Courses
+                  </p>
+                </div>
               </div>
             </Card>
-            <Card className="p-4 border-zinc-800 bg-zinc-900/30 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400">
-                <Brain className="w-5 h-5" />
+            <Card className="p-5 border-zinc-800 bg-gradient-to-br from-zinc-900/50 to-zinc-900/30 hover:border-zinc-700 transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-colors">
+                  <FileText className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-3xl font-bold text-zinc-100 mb-1">
+                    {userStats?.usage?.notes || 0}
+                  </p>
+                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+                    Notes Generated
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-zinc-100">
-                  {userStats?.quiz_average || 0}%
-                </p>
-                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-                  Quiz Average
-                </p>
+            </Card>
+            <Card className="p-5 border-zinc-800 bg-gradient-to-br from-zinc-900/50 to-zinc-900/30 hover:border-zinc-700 transition-all duration-300 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 group-hover:bg-amber-500/20 transition-colors">
+                  <Brain className="w-5 h-5 text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-3xl font-bold text-zinc-100 mb-1">
+                    {userStats?.quiz_average || 0}%
+                  </p>
+                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+                    Quiz Average
+                  </p>
+                </div>
               </div>
             </Card>
           </div>
@@ -189,11 +195,10 @@ const Dashboard = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    activeTab === tab
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === tab
                       ? "bg-zinc-800 text-zinc-100 shadow-sm"
                       : "text-zinc-500 hover:text-zinc-300"
-                  } capitalize`}
+                    } capitalize`}
                 >
                   {tab}
                 </button>

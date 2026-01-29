@@ -22,7 +22,7 @@ export default function Navbar() {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            localStorage.clear(); // Clear all local storage to prevent data persistence
+            localStorage.clear();
             toast.success("Logged out successfully");
             navigate("/auth");
         } catch (error) {
