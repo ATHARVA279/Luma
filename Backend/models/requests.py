@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator, HttpUrl
+from pydantic import BaseModel, Field, field_validator, HttpUrl
 from typing import List, Optional
 import ipaddress
 from urllib.parse import urlparse
@@ -7,7 +7,8 @@ class ExtractRequest(BaseModel):
     url: HttpUrl
     use_advanced_rag: bool = False
 
-    @validator('url')
+    @field_validator('url')
+    @classmethod
     def validate_url_security(cls, v):
         url_str = str(v)
         parsed = urlparse(url_str)
@@ -42,9 +43,10 @@ class GenerateNotesRequest(BaseModel):
     use_stored_content: bool = False
     document_id: Optional[str] = None  
 
-    @validator('content')
-    def validate_content_dependency(cls, v, values):
-        if not values.get('use_stored_content') and not v:
+    @field_validator('content')
+    @classmethod
+    def validate_content_dependency(cls, v, info):
+        if not info.data.get('use_stored_content') and not v:
             raise ValueError('Content must be provided if use_stored_content is False')
         return v
 
@@ -54,5 +56,5 @@ class SummaryRequest(BaseModel):
 
 class GenerateQuizRequest(BaseModel):
     count: int = Field(default=10, ge=5, le=20)
-    topics: List[str] = Field(..., min_items=1, max_items=5)
+    topics: List[str] = Field(..., min_length=1, max_length=5)
     document_id: Optional[str] = None  

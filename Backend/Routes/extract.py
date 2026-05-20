@@ -93,6 +93,7 @@ async def process_extraction_job(job_id: str, url: str, user_id: str, transactio
             "url": url,
             "title": concepts_list[0] if concepts_list else "Untitled Document",
             "status": "completed",
+            "text_content": text,
             "concepts": concepts_structured,
             "relationships": relationships,
             "metadata": {
