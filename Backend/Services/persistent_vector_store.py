@@ -4,6 +4,7 @@ from typing import List, Dict, Tuple, Optional, Any
 from datetime import datetime
 from bson import ObjectId
 from rank_bm25 import BM25Okapi
+import asyncio
 
 
 from Database.database import get_db
@@ -71,7 +72,7 @@ class PersistentVectorStore:
         if not chunk_ids:
             return None, []
             
-        bm25 = BM25Okapi(tokenized_corpus)
+        bm25 = await asyncio.to_thread(BM25Okapi, tokenized_corpus)
         
         self._cache.setdefault(cache_key, {})["bm25"] = (bm25, chunk_ids)
         

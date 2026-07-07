@@ -3,6 +3,7 @@ from firebase_admin import credentials, auth
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -47,7 +48,7 @@ from Database.database import get_db
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     try:
-        decoded_token = auth.verify_id_token(token)
+        decoded_token = await asyncio.to_thread(auth.verify_id_token, token)
         uid = decoded_token['uid']
         email = decoded_token.get('email')
         name = decoded_token.get('name')
